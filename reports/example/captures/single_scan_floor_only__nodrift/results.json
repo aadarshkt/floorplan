@@ -1,0 +1,200 @@
+{
+  "schema_version": "1.0",
+  "capture_id": "1a8384c3f6",
+  "tier": "lidar",
+  "units": "meters",
+  "property": {
+    "footprint_area_m2": {
+      "value": 103.959,
+      "ci95": [
+        97.9397,
+        103.9586
+      ],
+      "method": "bootstrap_hull"
+    },
+    "rooms": [
+      "r1"
+    ],
+    "adjacency": []
+  },
+  "rooms": [
+    {
+      "room_id": "r1",
+      "polygon": [
+        [
+          -6.371,
+          -8.9
+        ],
+        [
+          -3.359,
+          -9.294
+        ],
+        [
+          -3.859,
+          0.96
+        ],
+        [
+          -6.982,
+          3.61
+        ]
+      ],
+      "floor_area_m2": {
+        "value": 103.959,
+        "ci95": [
+          97.9397,
+          103.9586
+        ],
+        "method": "bootstrap_hull"
+      },
+      "ceiling_height_m": {
+        "value": 1.812,
+        "ci95": [
+          1.662,
+          1.962
+        ],
+        "method": "inferred_from_wall_tops",
+        "observed": false
+      },
+      "walls": [
+        {
+          "wall_id": "r1-w0",
+          "start": [
+            -6.371,
+            -8.9
+          ],
+          "end": [
+            -6.982,
+            3.61
+          ],
+          "length_m": {
+            "value": 12.5245,
+            "ci95": [
+              12.4985,
+              12.5245
+            ],
+            "method": "bootstrap"
+          },
+          "openings": [
+            {
+              "opening_id": "r1-w0-o0",
+              "type": "window",
+              "position_along_wall_m": 3.725,
+              "width_m": {
+                "value": 0.95,
+                "ci95": [
+                  0.94,
+                  0.96
+                ],
+                "method": "bin_resolution"
+              },
+              "sill_m": 1.435,
+              "head_m": 1.91
+            },
+            {
+              "opening_id": "r1-w0-o1",
+              "type": "door",
+              "position_along_wall_m": 6.275,
+              "width_m": {
+                "value": 0.65,
+                "ci95": [
+                  0.64,
+                  0.66
+                ],
+                "method": "bin_resolution"
+              },
+              "sill_m": 0.231,
+              "head_m": 2.008
+            },
+            {
+              "opening_id": "r1-w0-o2",
+              "type": "window",
+              "position_along_wall_m": 10.375,
+              "width_m": {
+                "value": 1.05,
+                "ci95": [
+                  1.04,
+                  1.06
+                ],
+                "method": "bin_resolution"
+              },
+              "sill_m": 1.091,
+              "head_m": 1.372
+            }
+          ]
+        },
+        {
+          "wall_id": "r1-w1",
+          "start": [
+            -3.359,
+            -9.294
+          ],
+          "end": [
+            -3.859,
+            0.96
+          ],
+          "length_m": {
+            "value": 10.2661,
+            "ci95": [
+              10.2357,
+              10.2661
+            ],
+            "method": "bootstrap"
+          },
+          "openings": [
+            {
+              "opening_id": "r1-w1-o0",
+              "type": "window",
+              "position_along_wall_m": 1.55,
+              "width_m": {
+                "value": 2.7,
+                "ci95": [
+                  2.69,
+                  2.71
+                ],
+                "method": "bin_resolution"
+              },
+              "sill_m": 0.325,
+              "head_m": 1.41
+            },
+            {
+              "opening_id": "r1-w1-o1",
+              "type": "door",
+              "position_along_wall_m": 4.55,
+              "width_m": {
+                "value": 1.2,
+                "ci95": [
+                  1.19,
+                  1.21
+                ],
+                "method": "bin_resolution"
+              },
+              "sill_m": 0.018,
+              "head_m": 0.06
+            }
+          ]
+        }
+      ],
+      "damage_regions": [],
+      "concealed_damage_flags": [],
+      "scope_line_items": []
+    }
+  ],
+  "drift": {
+    "method": "none",
+    "n_loops": 0,
+    "correction_applied": false,
+    "ablation": {
+      "on": null,
+      "off": null
+    }
+  },
+  "confidence": {
+    "calibration_factor": 1.0,
+    "method": "bootstrap+propagation"
+  },
+  "artifacts": {
+    "svg": "floor_plan.svg",
+    "dxf": "floor_plan.dxf",
+    "pointcloud": "scan_metric.ply"
+  }
+}

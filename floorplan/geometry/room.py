@@ -32,6 +32,7 @@ class Room:
     ceiling_observed: bool
     floor_z: float
     walls: list[Wall] = field(default_factory=list)
+    room_id: str = "r1"
 
 
 def _density_floor_ceiling(points: np.ndarray, cfg: Settings) -> tuple[float, float, bool]:
@@ -105,6 +106,60 @@ def shoelace(polygon: np.ndarray) -> float:
     return float(abs(np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1))) / 2.0)
 
 
+def shoelace_signed(polygon: np.ndarray) -> float:
+    n = len(polygon)
+    if n < 3:
+        return 0.0
+    x, y = polygon[:, 0], polygon[:, 1]
+    return float((np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1))) / 2.0)
+
+
+def point_in_polygon(xy: np.ndarray, polygon: np.ndarray) -> np.ndarray:
+    """Vectorised ray-casting point-in-polygon test."""
+    x, y = xy[:, 0], xy[:, 1]
+    inside = np.zeros(len(xy), dtype=bool)
+    n = len(polygon)
+    j = n - 1
+    for i in range(n):
+        xi, yi = polygon[i]
+        xj, yj = polygon[j]
+        crosses = ((yi > y) != (yj > y))
+        denom = (yj - yi) if abs(yj - yi) > 1e-12 else 1e-12
+        xint = (xj - xi) * (y - yi) / denom + xi
+        inside ^= crosses & (x < xint)
+        j = i
+    return inside
+
+
+def ceiling_height(floor_z: float, ceil_z: float, observed: bool,
+                   floor_pts: np.ndarray, ceil_pts: np.ndarray, cfg: Settings) -> Measurement:
+    height = ceil_z - floor_z
+    if observed and len(floor_pts) >= 30 and len(ceil_pts) >= 30:
+        h_ci = confidence.bootstrap_scalar(ceil_pts[:, 2], cfg)
+        lo_ci = confidence.bootstrap_scalar(floor_pts[:, 2], cfg)
+        if h_ci is not None and lo_ci is not None:
+            ci = [round(h_ci[0] - lo_ci[1], 4), round(h_ci[1] - lo_ci[0], 4)]
+        else:
+            ci = [round(height - 0.02, 3), round(height + 0.02, 3)]
+        method = "bootstrap"
+    else:
+        ci = [round(height - 0.15, 3), round(height + 0.15, 3)]
+        method = "inferred_from_wall_tops"
+    return Measurement(round(height, 3), confidence.bracket(height, ci), method)
+
+
+def property_area(floor_pts: np.ndarray, cfg: Settings) -> Measurement:
+    from scipy.spatial import ConvexHull
+    if len(floor_pts) < 10:
+        return Measurement(0.0, [0.0, 0.0], "none")
+    try:
+        value = float(ConvexHull(floor_pts[:, :2]).volume)
+    except Exception:
+        return Measurement(0.0, [0.0, 0.0], "none")
+    ci = confidence.bootstrap_hull_area(floor_pts[:, :2], cfg) or [value * 0.97, value * 1.03]
+    return Measurement(round(value, 3), confidence.bracket(value, ci), "bootstrap_hull")
+
+
 def assemble(walls: list[Wall], floor_z: float, ceil_z: float, observed: bool,
              floor_pts: np.ndarray, ceil_pts: np.ndarray,
              points: np.ndarray, cfg: Settings) -> Room:
@@ -128,24 +183,13 @@ def assemble(walls: list[Wall], floor_z: float, ceil_z: float, observed: bool,
     area_ci = confidence.bracket(area_val, area_ci)
 
     height = ceil_z - floor_z
-    if observed and len(floor_pts) >= 30 and len(ceil_pts) >= 30:
-        h_ci = confidence.bootstrap_scalar(ceil_pts[:, 2], cfg)
-        lo_ci = confidence.bootstrap_scalar(floor_pts[:, 2], cfg)
-        if h_ci is not None and lo_ci is not None:
-            height_ci = [round(h_ci[0] - lo_ci[1], 4), round(h_ci[1] - lo_ci[0], 4)]
-        else:
-            height_ci = [round(height - 0.02, 3), round(height + 0.02, 3)]
-        method = "bootstrap"
-    else:
-        height_ci = [round(height - 0.15, 3), round(height + 0.15, 3)]
-        method = "inferred_from_wall_tops"
-    height_ci = confidence.bracket(height, height_ci)
+    height_meas = ceiling_height(floor_z, ceil_z, observed, floor_pts, ceil_pts, cfg)
 
     return Room(
         polygon=[[round(float(x), 3), round(float(y), 3)]
                  for x, y in (polygon if polygon is not None else [])],
         floor_area_m2=Measurement(round(area_val, 3), area_ci, "bootstrap_hull"),
-        ceiling_height_m=Measurement(round(height, 3), height_ci, method),
+        ceiling_height_m=height_meas,
         ceiling_observed=bool(observed),
         floor_z=round(float(floor_z), 3),
         walls=walls,

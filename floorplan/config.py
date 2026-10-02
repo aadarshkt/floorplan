@@ -39,6 +39,14 @@ class Settings:
     snap_orthogonal: bool = True
     ortho_snap_max_deg: float = 20.0   # don't snap beyond this; flag slanted rooms
 
+    # ── multi-room ───────────────────────────────────────────────────────────
+    node_merge_tol: float = 0.15       # wall endpoints within this are one corner
+    min_room_area: float = 2.0
+    max_room_area: float = 120.0
+
+    # ── drift correction ─────────────────────────────────────────────────────
+    drift_correction: bool = True
+
     # ── openings ─────────────────────────────────────────────────────────────
     opening_bin: float = 0.05
     min_opening_width: float = 0.5

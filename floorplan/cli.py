@@ -23,6 +23,8 @@ def _settings_from_args(a: argparse.Namespace) -> Settings:
         cfg.engine = a.engine
     if getattr(a, "scale_ref", None) is not None:
         cfg.scale_ref_m = a.scale_ref
+    if getattr(a, "no_drift_correction", False):
+        cfg.drift_correction = False
     return cfg
 
 
@@ -46,6 +48,8 @@ def main(argv: list[str] | None = None) -> int:
                    help="minimum depth confidence to keep (Record3D: 0/1/2)")
     r.add_argument("--max-frames", type=int, default=None,
                    help="cap on fused depth frames (default 500)")
+    r.add_argument("--no-drift-correction", action="store_true",
+                   help="use poses as-is (for the drift on/off ablation)")
     r.add_argument("--quiet", action="store_true")
 
     b = sub.add_parser("bench", help="run the benchmark manifest and score gates")
@@ -55,6 +59,9 @@ def main(argv: list[str] | None = None) -> int:
                    help="directory of cached <capture_id>/results.json to reuse")
     b.add_argument("--conf-min", type=int, default=None)
     b.add_argument("--max-frames", type=int, default=None)
+    b.add_argument("--no-drift-correction", action="store_true")
+    b.add_argument("--ablate-drift", action="store_true",
+                   help="also run each capture with drift correction OFF and report the delta")
     b.add_argument("--quiet", action="store_true")
 
     args = ap.parse_args(argv)
@@ -75,7 +82,7 @@ def main(argv: list[str] | None = None) -> int:
         cfg = _settings_from_args(args)
         try:
             bench.run(args.manifest, args.out, reuse_dir=args.reuse, cfg=cfg,
-                      verbose=not args.quiet)
+                      verbose=not args.quiet, ablate_drift=args.ablate_drift)
         except Exception as exc:
             print(f"error: {type(exc).__name__}: {exc}", file=sys.stderr)
             return 1

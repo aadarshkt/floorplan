@@ -1,0 +1,284 @@
+{
+  "schema_version": "1.0",
+  "capture_id": "c7d28f72c6",
+  "tier": "lidar",
+  "units": "meters",
+  "property": {
+    "footprint_area_m2": {
+      "value": 99.325,
+      "ci95": [
+        92.7063,
+        99.3254
+      ],
+      "method": "bootstrap_hull"
+    },
+    "rooms": [
+      "r1"
+    ],
+    "adjacency": []
+  },
+  "rooms": [
+    {
+      "room_id": "r1",
+      "polygon": [
+        [
+          -5.137,
+          -7.909
+        ],
+        [
+          -2.522,
+          -9.383
+        ],
+        [
+          2.369,
+          -6.809
+        ],
+        [
+          4.843,
+          -9.562
+        ],
+        [
+          5.697,
+          -8.587
+        ],
+        [
+          7.804,
+          -4.091
+        ],
+        [
+          4.716,
+          -2.472
+        ],
+        [
+          4.139,
+          2.929
+        ],
+        [
+          1.458,
+          4.281
+        ],
+        [
+          -2.606,
+          -4.095
+        ]
+      ],
+      "floor_area_m2": {
+        "value": 99.325,
+        "ci95": [
+          92.7063,
+          99.3254
+        ],
+        "method": "bootstrap_hull"
+      },
+      "ceiling_height_m": {
+        "value": 3.069,
+        "ci95": [
+          3.0687,
+          3.0696
+        ],
+        "method": "bootstrap",
+        "observed": true
+      },
+      "walls": [
+        {
+          "wall_id": "r1-w0",
+          "start": [
+            5.697,
+            -8.587
+          ],
+          "end": [
+            -2.606,
+            -4.095
+          ],
+          "length_m": {
+            "value": 9.4402,
+            "ci95": [
+              9.4152,
+              9.4402
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w1",
+          "start": [
+            -2.522,
+            -9.383
+          ],
+          "end": [
+            4.139,
+            2.929
+          ],
+          "length_m": {
+            "value": 13.9988,
+            "ci95": [
+              13.8633,
+              13.9988
+            ],
+            "method": "bootstrap"
+          },
+          "openings": [
+            {
+              "opening_id": "r1-w1-o0",
+              "type": "window",
+              "position_along_wall_m": 11.6,
+              "width_m": {
+                "value": 1.9,
+                "ci95": [
+                  1.89,
+                  1.91
+                ],
+                "method": "bin_resolution"
+              },
+              "sill_m": 1.196,
+              "head_m": 1.896
+            }
+          ]
+        },
+        {
+          "wall_id": "r1-w2",
+          "start": [
+            2.369,
+            -6.809
+          ],
+          "end": [
+            4.716,
+            -2.472
+          ],
+          "length_m": {
+            "value": 4.9319,
+            "ci95": [
+              4.9216,
+              4.9319
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w3",
+          "start": [
+            -5.137,
+            -7.909
+          ],
+          "end": [
+            1.458,
+            4.281
+          ],
+          "length_m": {
+            "value": 13.8593,
+            "ci95": [
+              13.8403,
+              13.8593
+            ],
+            "method": "bootstrap"
+          },
+          "openings": [
+            {
+              "opening_id": "r1-w3-o0",
+              "type": "window",
+              "position_along_wall_m": 1.125,
+              "width_m": {
+                "value": 1.95,
+                "ci95": [
+                  1.94,
+                  1.96
+                ],
+                "method": "bin_resolution"
+              },
+              "sill_m": 1.184,
+              "head_m": 1.715
+            },
+            {
+              "opening_id": "r1-w3-o1",
+              "type": "door",
+              "position_along_wall_m": 3.925,
+              "width_m": {
+                "value": 1.75,
+                "ci95": [
+                  1.74,
+                  1.76
+                ],
+                "method": "bin_resolution"
+              },
+              "sill_m": 0.144,
+              "head_m": 2.303
+            },
+            {
+              "opening_id": "r1-w3-o2",
+              "type": "window",
+              "position_along_wall_m": 7.0,
+              "width_m": {
+                "value": 0.5,
+                "ci95": [
+                  0.49,
+                  0.51
+                ],
+                "method": "bin_resolution"
+              },
+              "sill_m": 1.064,
+              "head_m": 1.873
+            },
+            {
+              "opening_id": "r1-w3-o3",
+              "type": "window",
+              "position_along_wall_m": 11.05,
+              "width_m": {
+                "value": 0.8,
+                "ci95": [
+                  0.79,
+                  0.81
+                ],
+                "method": "bin_resolution"
+              },
+              "sill_m": 1.05,
+              "head_m": 1.656
+            }
+          ]
+        },
+        {
+          "wall_id": "r1-w4",
+          "start": [
+            4.843,
+            -9.562
+          ],
+          "end": [
+            7.804,
+            -4.091
+          ],
+          "length_m": {
+            "value": 6.2209,
+            "ci95": [
+              6.2119,
+              6.2209
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        }
+      ],
+      "damage_regions": [],
+      "concealed_damage_flags": [],
+      "scope_line_items": []
+    }
+  ],
+  "drift": {
+    "method": "none",
+    "n_loops": 0,
+    "correction_applied": false,
+    "ablation": {
+      "on": null,
+      "off": null
+    }
+  },
+  "confidence": {
+    "calibration_factor": 1.0,
+    "method": "bootstrap+propagation"
+  },
+  "artifacts": {
+    "svg": "floor_plan.svg",
+    "dxf": "floor_plan.dxf",
+    "pointcloud": "scan_metric.ply"
+  }
+}

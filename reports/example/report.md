@@ -12,7 +12,21 @@
 
 ## Confidence-interval calibration
 
-- samples: 19, coverage: 95% (target ≥ 85%)
+- samples: 20, coverage: 95% (target ≥ 85%)
+
+## Drift ablation (correction ON vs OFF; delta = off − on, positive = ON is better)
+
+| capture | room | gate | ON | OFF | delta |
+|---|---|---|---|---|---|
+| single_room | room1 | max_wall_cm | 0.00 | 7.25 | 7.25 |
+| single_room | room1 | ceiling_cm | 0.00 | 0.90 | 0.90 |
+| single_room | room1 | area_rel_pct | 0.000 | 1.936 | 1.936 |
+| single_scan_floor_only | room1 | max_wall_cm | 0.00 | 110.06 | 110.06 |
+| single_scan_floor_only | room1 | ceiling_cm | 0.00 | 0.00 | 0.00 |
+| single_scan_floor_only | room1 | area_rel_pct | 0.000 | 0.130 | 0.130 |
+| single_scan_with_ceiling | room1 | max_wall_cm | 0.00 | 7.00 | 7.00 |
+| single_scan_with_ceiling | room1 | ceiling_cm | 0.00 | 0.90 | 0.90 |
+| single_scan_with_ceiling | room1 | area_rel_pct | 0.000 | 0.825 | 0.825 |
 
 ## Gates
 

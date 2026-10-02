@@ -9,6 +9,7 @@ matches produced measurements to ground truth, and writes `gates.json` +
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 from floorplan import pipeline
@@ -129,7 +130,7 @@ def evaluate_repeatability(room_id: str, a: dict, b: dict, gates: dict) -> dict:
 
 def run(manifest_path: str | Path, out_dir: str | Path,
         reuse_dir: str | Path | None = None, cfg: Settings | None = None,
-        verbose: bool = True) -> dict:
+        verbose: bool = True, ablate_drift: bool = False) -> dict:
     cfg = cfg or Settings()
     manifest_path = Path(manifest_path)
     base = manifest_path.parent
@@ -171,6 +172,39 @@ def run(manifest_path: str | Path, out_dir: str | Path,
     coverage = (sum(1 for _, gt_v, lo, hi in ci_samples if lo <= gt_v <= hi) / n_ci
                 if n_ci else 0.0)
     passed_n = sum(1 for c in per_capture if c["passed"])
+
+    ablations: list[dict] = []
+    if ablate_drift:
+        cfg_off = replace(cfg, drift_correction=False)
+
+        def _tri(rc: dict) -> dict:
+            return {"max_wall_cm": rc["wall_length"]["max_abs_cm"],
+                    "ceiling_cm": rc["ceiling_height"]["abs_cm"],
+                    "area_rel_pct": rc["area"]["rel_pct"], "passed": rc["passed"]}
+
+        def _delta(on, off, nd):
+            if on is None or off is None:
+                return None
+            return round(off - on, nd)
+
+        for entry, rc in zip(manifest["captures"], per_capture):
+            cid = entry["id"]
+            gt = groundtruth.load(_resolve(base, entry["ground_truth"]),
+                                  fallback_room_id=entry.get("room_id", "r1"))
+            res_off = pipeline.run(_resolve(base, entry["path"]), cache / f"{cid}__nodrift",
+                                   cfg=cfg_off, tier=entry.get("tier"), verbose=False)
+            rc_off = evaluate_capture(cid, entry.get("room_id", "r1"), res_off, gt, gates, [])
+            on, off = _tri(rc), _tri(rc_off)
+            ablations.append({
+                "capture_id": cid, "room_id": entry.get("room_id", "r1"),
+                "on": on, "off": off,
+                "delta": {"max_wall_cm": _delta(on["max_wall_cm"], off["max_wall_cm"], 2),
+                          "ceiling_cm": _delta(on["ceiling_cm"], off["ceiling_cm"], 2),
+                          "area_rel_pct": _delta(on["area_rel_pct"], off["area_rel_pct"], 3)},
+            })
+        if verbose:
+            print(f"[bench] drift ablation over {len(ablations)} captures (delta = off - on)")
+
     summary = {
         "captures_total": len(per_capture),
         "captures_passed": passed_n,
@@ -178,12 +212,14 @@ def run(manifest_path: str | Path, out_dir: str | Path,
         "repeatability_passed": sum(1 for r in repeat if r["passed"]),
         "ci": {"n": n_ci, "coverage": round(coverage, 3),
                "meets_target": coverage >= gates["ci_coverage_min"] if n_ci else False},
+        "drift_ablation_captures": len(ablations),
     }
 
     (out / "gates.json").write_text(json.dumps(
         {"manifest": manifest_path.name, "gates": gates, "summary": summary,
-         "per_capture": per_capture, "repeatability": repeat}, indent=2) + "\n")
-    report.write(out, manifest_path.name, per_capture, repeat, summary, gates)
+         "per_capture": per_capture, "repeatability": repeat,
+         "drift_ablation": ablations}, indent=2) + "\n")
+    report.write(out, manifest_path.name, per_capture, repeat, summary, gates, ablations)
 
     if verbose:
         print(f"[bench] {passed_n}/{len(per_capture)} captures passed; "

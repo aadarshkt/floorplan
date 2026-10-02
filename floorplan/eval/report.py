@@ -13,7 +13,8 @@ def _fmt(v, unit="", nd=2):
 
 
 def to_markdown(manifest_name: str, per_capture: list[dict],
-                repeatability: list[dict], summary: dict, gates: dict) -> str:
+                repeatability: list[dict], summary: dict, gates: dict,
+                ablations: list[dict] | None = None) -> str:
     lines: list[str] = []
     lines.append(f"# Benchmark report — {manifest_name}")
     lines.append("")
@@ -58,6 +59,20 @@ def to_markdown(manifest_name: str, per_capture: list[dict],
                  f"{summary['ci']['coverage']*100:.0f}% (target ≥ {gates['ci_coverage_min']*100:.0f}%)")
     lines.append("")
 
+    if ablations:
+        lines.append("## Drift ablation (correction ON vs OFF; delta = off − on, positive = ON is better)")
+        lines.append("")
+        lines.append("| capture | room | gate | ON | OFF | delta |")
+        lines.append("|---|---|---|---|---|---|")
+        for a in ablations:
+            for key, nd in (("max_wall_cm", 2), ("ceiling_cm", 2), ("area_rel_pct", 3)):
+                lines.append(
+                    f"| {a['capture_id']} | {a['room_id']} | {key} | "
+                    f"{_fmt(a['on'][key], '', nd)} | {_fmt(a['off'][key], '', nd)} | "
+                    f"{_fmt(a['delta'][key], '', nd)} |"
+                )
+        lines.append("")
+
     lines.append("## Gates")
     lines.append("")
     lines.append("| gate | threshold |")
@@ -69,8 +84,9 @@ def to_markdown(manifest_name: str, per_capture: list[dict],
 
 
 def write(out_dir: str | Path, manifest_name: str, per_capture: list[dict],
-          repeatability: list[dict], summary: dict, gates: dict) -> None:
+          repeatability: list[dict], summary: dict, gates: dict,
+          ablations: list[dict] | None = None) -> None:
     out = Path(out_dir)
     (out / "report.md").write_text(
-        to_markdown(manifest_name, per_capture, repeatability, summary, gates)
+        to_markdown(manifest_name, per_capture, repeatability, summary, gates, ablations)
     )

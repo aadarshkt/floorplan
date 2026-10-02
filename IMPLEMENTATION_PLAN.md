@@ -468,6 +468,15 @@ folder of 2–8 images → photos; single .mp4/.mov → video).
   6/6 unit tests). `single_room` and `single_scan_floor_only` ceilings are reported
   `observed:false` (not densely captured) — honestly widened intervals.
 
-**Next (P1→P3):** multi-room stitch + drift ablation; benchmark harness + ground
-truth; photos/video tiers; damage/scope; reports, compliance matrix, head-to-head,
-capture protocol, fix-loop bundle.
+**P1 — benchmark harness + multi-room + drift ablation: DONE.**
+- `floorplan bench --manifest M --out D [--reuse R] [--ablate-drift]`: ground-truth
+  loader, unordered optimal (Hungarian) matching of walls/openings, gates (wall
+  length, ceiling, openings pass-rate + phantom, area, repeatability, CI coverage),
+  writes `gates.json` + `report.md`; also the fix loop's before/after runner.
+- Multi-room: rooms are the interior faces of the wall network's planar graph
+  (falls back to single room when the network is open); room adjacency recorded.
+- Drift ablation table (correction ON vs OFF); LiDAR correction is a capped
+  (≤5 cm) loop-closure blend — ARKit VIO poses are already metric.
+
+**Next (P2→P3):** photos/video tiers; damage/scope; reports, compliance matrix,
+head-to-head, capture protocol, fix-loop bundle.
