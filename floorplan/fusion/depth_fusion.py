@@ -1,14 +1,16 @@
 """Depth + pose fusion for the LiDAR tier.
 
 Each depth frame is unprojected to camera-space points with its own intrinsics,
-transformed into the ARKit world frame by its pose, then rotated into a
-canonical Z-up metric frame. Frames are strided to a bounded count and the
-merged cloud is voxel-downsampled + outlier-filtered.
+transformed into the world frame by its pose, then rotated into a canonical Z-up
+metric frame. Frames are strided to a bounded count and the merged cloud is
+voxel-downsampled + outlier-filtered.
 
 Conventions (documented once, applied everywhere):
-  * ARKit world is Y-up; camera looks down -Z.
   * Record3D depth PNG values are millimetres along the camera +Z axis.
-  * We convert ARKit world (x, y, z) -> canonical Z-up (x, -z, y).
+  * ARKit world is Y-up; we convert world (x, y, z) -> canonical Z-up (x, -z, y).
+  * Pose convention: some exports store camera->world (c2w), others world->camera
+    (w2c). We auto-detect the convention that yields vertical walls / horizontal
+    floors, since getting it wrong shears the cloud (walls tilt, floors stay flat).
 """
 from __future__ import annotations
 
@@ -19,6 +21,7 @@ import open3d as o3d
 from PIL import Image
 
 from floorplan.config import Settings
+from floorplan.geometry import planes as planes_mod
 from floorplan.ingest import record3d
 
 
@@ -63,39 +66,76 @@ def _frame_points(depth_png: np.ndarray, conf_png: np.ndarray | None,
     return np.stack([x, y, z], axis=1)
 
 
-def fuse(capture: record3d.Record3DCapture, cfg: Settings,
-         verbose: bool = False) -> o3d.geometry.PointCloud:
+def _to_world(pc: np.ndarray, R: np.ndarray, t: np.ndarray, convention: str) -> np.ndarray:
+    if convention == "c2w":
+        world = pc @ R.T + t
+    else:  # w2c
+        world = (pc - t) @ R
+    # ARKit/Record3D world y-up (x,y,z) -> canonical Z-up (x, -z, y)
+    return np.stack([world[:, 0], -world[:, 2], world[:, 1]], axis=1)
+
+
+def _accumulate(capture, cfg: Settings, idxs, intr, convention: str, px_stride: int) -> np.ndarray:
+    chunks: list[np.ndarray] = []
+    use_conf = len(capture.conf_paths) == capture.n_frames
+    for i in idxs:
+        depth_img = np.asarray(Image.open(capture.depth_paths[i]))
+        conf_img = np.asarray(Image.open(capture.conf_paths[i])) if use_conf else None
+        fx, fy, cx, cy = intr[i]
+        pc = _frame_points(depth_img, conf_img, fx, fy, cx, cy,
+                           cfg.conf_min, cfg.depth_min_m, cfg.depth_max_m, px_stride)
+        if len(pc) == 0:
+            continue
+        chunks.append(_to_world(pc, quat_to_matrix(capture.quat[i]), capture.pos[i], convention))
+    return np.concatenate(chunks, axis=0) if chunks else np.zeros((0, 3))
+
+
+def _convention_score(points: np.ndarray, cfg: Settings) -> float:
+    """Lower is better: how close the biggest planes are to axis-aligned (walls
+    vertical, floor/ceiling horizontal) in a Z-up frame."""
+    if len(points) < 2000:
+        return 1.0
+    pls = planes_mod.extract_planes(points, cfg)
+    if not pls:
+        return 1.0
+    big = sorted(pls, key=lambda p: -len(p.points))[:6]
+    return float(np.mean([min(abs(p.normal[2]), 1.0 - abs(p.normal[2])) for p in big]))
+
+
+def detect_pose_convention(capture, cfg: Settings, n_frames: int = 40) -> str:
+    stride = max(1, capture.n_frames // n_frames)
+    idxs = list(range(0, capture.n_frames, stride))
+    intr = record3d.depth_intrinsics(capture)
+    best_conv, best_score = "c2w", None
+    for conv in ("c2w", "w2c"):
+        pts = _accumulate(capture, cfg, idxs, intr, conv, px_stride=2)
+        score = _convention_score(pts, cfg)
+        if best_score is None or score < best_score:
+            best_conv, best_score = conv, score
+    return best_conv
+
+
+def fuse(capture: record3d.Record3DCapture, cfg: Settings, verbose: bool = False,
+         convention: str = "auto") -> o3d.geometry.PointCloud:
     """Fuse a Record3D capture into a canonical Z-up metric point cloud."""
     n = capture.n_frames
     if n == 0:
         raise ValueError("Capture has no frames")
 
+    if convention == "auto":
+        convention = detect_pose_convention(capture, cfg)
+
     stride = max(1, math.ceil(n / cfg.max_frames))
+    idxs = list(range(0, n, stride))
     intr = record3d.depth_intrinsics(capture)
-    use_conf = len(capture.conf_paths) == n
+    pts = _accumulate(capture, cfg, idxs, intr, convention, cfg.px_stride)
 
-    chunks: list[np.ndarray] = []
-    for i in range(0, n, stride):
-        depth_img = np.asarray(Image.open(capture.depth_paths[i]))
-        conf_img = np.asarray(Image.open(capture.conf_paths[i])) if use_conf else None
-        fx, fy, cx, cy = intr[i]
-        pc = _frame_points(depth_img, conf_img, fx, fy, cx, cy,
-                           cfg.conf_min, cfg.depth_min_m, cfg.depth_max_m, cfg.px_stride)
-        if len(pc) == 0:
-            continue
-        R = quat_to_matrix(capture.quat[i])
-        world = pc @ R.T + capture.pos[i]
-        # ARKit y-up (x,y,z) -> canonical Z-up (x, -z, y)
-        zup = np.stack([world[:, 0], -world[:, 2], world[:, 1]], axis=1)
-        chunks.append(zup)
-
-    if not chunks:
+    if len(pts) == 0:
         raise ValueError(
             "No usable depth points after confidence/range filtering. "
             "Try a lower --conf-min or check the capture."
         )
 
-    pts = np.concatenate(chunks, axis=0)
     pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(pts))
     pcd = pcd.voxel_down_sample(cfg.voxel_size)
     if len(pcd.points) >= cfg.stat_nb_neighbors:
@@ -104,6 +144,7 @@ def fuse(capture: record3d.Record3DCapture, cfg: Settings,
         )
     if verbose:
         bb = pcd.get_axis_aligned_bounding_box()
-        print(f"[fusion] frames={len(chunks)} pts_raw={len(pts)} pts_clean={len(pcd.points)}")
+        print(f"[fusion] convention={convention} frames={len(idxs)} "
+              f"pts_raw={len(pts)} pts_clean={len(pcd.points)}")
         print(f"[fusion] bbox extent={np.round(bb.get_extent(), 3)} (Z is up)")
     return pcd

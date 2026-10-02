@@ -46,6 +46,7 @@ class Settings:
 
     # ── drift correction ─────────────────────────────────────────────────────
     drift_correction: bool = True
+    auto_up: bool = True               # rotate cloud so estimated gravity = +Z
 
     # ── openings ─────────────────────────────────────────────────────────────
     opening_bin: float = 0.05

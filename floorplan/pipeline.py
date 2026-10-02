@@ -12,6 +12,7 @@ from floorplan.config import Settings
 from floorplan.export import dxf, json_export, provenance, svg
 from floorplan.fusion import depth_fusion
 from floorplan.geometry import confidence
+from floorplan.geometry import align
 from floorplan.geometry import multiroom
 from floorplan.geometry import openings as openings_mod
 from floorplan.geometry import planes as planes_mod
@@ -53,10 +54,21 @@ def _run_lidar(capture_path: str | Path, out: Path, cfg: Settings, verbose: bool
     timings["drift"] = 0.0
 
     t0 = time.time()
-    pcd = depth_fusion.fuse(cap, cfg, verbose=verbose)
+    convention = depth_fusion.detect_pose_convention(cap, cfg)
+    pcd = depth_fusion.fuse(cap, cfg, verbose=verbose, convention=convention)
+    pts = np.asarray(pcd.points)
+    if cfg.auto_up and len(pts) > 1000:
+        up = align.estimate_up(pts, cfg)
+        # Only correct a modest tilt; never apply a ~180° flip (that would mirror
+        # the plan). Exports are gravity-aligned, so this is a safety net.
+        if 0.5 < up[2] < 1.0 - 1e-4:
+            R = align.rotation_to_z(up)
+            pcd.rotate(R, center=(0.0, 0.0, 0.0))
+            pts = np.asarray(pcd.points)
+            if verbose:
+                print(f"[align] up axis {np.round(up, 3)} -> rotated upright")
     timings["fusion"] = time.time() - t0
     o3d.io.write_point_cloud(str(out / "scan_metric.ply"), pcd)
-    pts = np.asarray(pcd.points)
 
     t0 = time.time()
     pls = planes_mod.extract_planes(pts, cfg)
@@ -103,7 +115,8 @@ def _run_lidar(capture_path: str | Path, out: Path, cfg: Settings, verbose: bool
                title=f"{cap.capture_id} — LiDAR ({len(rooms)} room{'s' if len(rooms) != 1 else ''})")
     dxf.render(rooms, out / "floor_plan.dxf")
     prov = provenance.write(out / "provenance.json", tier="lidar", capture_id=cap.capture_id,
-                            cfg=cfg, timings=timings, path_chosen="depth_fusion",
+                            cfg=cfg, timings=timings,
+                            path_chosen=f"depth_fusion:{convention}",
                             input_path=capture_path)
     if verbose:
         print(f"[done] {out}  (total {prov['total_s']}s)")
