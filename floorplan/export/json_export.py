@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 
 from floorplan.config import Settings
+from floorplan.geometry import confidence
 from floorplan.geometry.room import Room
 
 
@@ -33,6 +34,7 @@ def build_payload(capture_id: str, tier: str, room: Room,
             for k, o in enumerate(w.openings)
         ]
         ci = wall_ci.get(w.id) or [round(w.length * 0.995, 3), round(w.length * 1.005, 3)]
+        ci = confidence.bracket(w.length, ci)
         walls_payload.append({
             "wall_id": f"w{w.id}",
             "start": [round(float(w.start[0]), 3), round(float(w.start[1]), 3)],

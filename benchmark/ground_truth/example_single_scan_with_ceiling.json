@@ -1,0 +1,36 @@
+{
+  "_placeholder": true,
+  "_note": "Derived from pipeline output for harness demo; replace with laser/tape measurements.",
+  "room_id": "room1",
+  "ceiling_height_m": 3.069,
+  "floor_area_m2": 99.325,
+  "wall_lengths_m": [
+    9.4402,
+    13.9988,
+    4.9319,
+    13.8593,
+    6.2209
+  ],
+  "openings": [
+    {
+      "type": "window",
+      "width_m": 1.9
+    },
+    {
+      "type": "window",
+      "width_m": 1.95
+    },
+    {
+      "type": "door",
+      "width_m": 1.75
+    },
+    {
+      "type": "window",
+      "width_m": 0.5
+    },
+    {
+      "type": "window",
+      "width_m": 0.8
+    }
+  ]
+}

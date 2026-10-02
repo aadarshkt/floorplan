@@ -17,6 +17,11 @@ def ci_from_samples(samples: np.ndarray, level: float) -> list[float]:
     return [round(lo, 4), round(hi, 4)]
 
 
+def bracket(value: float, ci: list[float]) -> list[float]:
+    """Guarantee an interval contains its own point estimate."""
+    return [round(float(min(value, ci[0])), 4), round(float(max(value, ci[1])), 4)]
+
+
 def bootstrap_length(points_xyz: np.ndarray, cfg: Settings,
                      sample_cap: int = 20000) -> list[float] | None:
     """Bootstrap the 2D extent (length) of a wall's inlier points."""

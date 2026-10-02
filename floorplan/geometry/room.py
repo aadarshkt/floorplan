@@ -67,6 +67,12 @@ def floor_and_ceiling(planes: list, points: np.ndarray, cfg: Settings
         ceil_z = top if (top - floor_z) >= 1.8 else floor_z + cfg.default_ceiling_m
     floor_pts = points[np.abs(points[:, 2] - floor_z) <= 0.05]
     ceil_pts = points[np.abs(points[:, 2] - ceil_z) <= 0.05]
+    # Report the plane heights with the same estimator the CI uses (median), so
+    # the interval is guaranteed to bracket the reported value.
+    if len(floor_pts) >= 10:
+        floor_z = float(np.median(floor_pts[:, 2]))
+    if len(ceil_pts) >= 10:
+        ceil_z = float(np.median(ceil_pts[:, 2]))
     return floor_z, ceil_z, observed, floor_pts, ceil_pts
 
 
@@ -105,22 +111,21 @@ def assemble(walls: list[Wall], floor_z: float, ceil_z: float, observed: bool,
     polygon = build_polygon(walls)
     area_val = shoelace(polygon) if polygon is not None else 0.0
 
+    # Floor area uses the observed floor footprint (convex hull) so that the
+    # value and its bootstrap CI come from the same estimator.
+    from scipy.spatial import ConvexHull
     if len(floor_pts) >= 10:
-        area_ci = confidence.bootstrap_hull_area(floor_pts[:, :2], cfg)
-    else:
-        area_ci = None
-    if area_ci is None or polygon is None:
-        if polygon is None and len(floor_pts) >= 4:
-            from scipy.spatial import ConvexHull
-            hullxy = floor_pts[:, :2]
-            try:
-                hull = ConvexHull(hullxy)
-                area_val = float(hull.volume)
-                polygon = hullxy[hull.vertices]
-            except Exception:
-                pass
-        if area_ci is None:
-            area_ci = [round(area_val * 0.97, 3), round(area_val * 1.03, 3)]
+        try:
+            hull = ConvexHull(floor_pts[:, :2])
+            area_val = float(hull.volume)
+            if polygon is None:
+                polygon = floor_pts[:, :2][hull.vertices]
+        except Exception:
+            pass
+    area_ci = confidence.bootstrap_hull_area(floor_pts[:, :2], cfg) if len(floor_pts) >= 10 else None
+    if area_ci is None:
+        area_ci = [round(area_val * 0.97, 3), round(area_val * 1.03, 3)]
+    area_ci = confidence.bracket(area_val, area_ci)
 
     height = ceil_z - floor_z
     if observed and len(floor_pts) >= 30 and len(ceil_pts) >= 30:
@@ -134,6 +139,7 @@ def assemble(walls: list[Wall], floor_z: float, ceil_z: float, observed: bool,
     else:
         height_ci = [round(height - 0.15, 3), round(height + 0.15, 3)]
         method = "inferred_from_wall_tops"
+    height_ci = confidence.bracket(height, height_ci)
 
     return Room(
         polygon=[[round(float(x), 3), round(float(y), 3)]

@@ -1,0 +1,10 @@
+{
+  "room_id": "room1",
+  "ceiling_height_m": 2.42,
+  "floor_area_m2": 13.1,
+  "wall_lengths_m": [4.2, 3.15, 4.18, 3.1],
+  "openings": [
+    { "type": "door", "width_m": 0.82 },
+    { "type": "window", "width_m": 1.2 }
+  ]
+}
