@@ -128,7 +128,16 @@ def fuse(capture: record3d.Record3DCapture, cfg: Settings, verbose: bool = False
     stride = max(1, math.ceil(n / cfg.max_frames))
     idxs = list(range(0, n, stride))
     intr = record3d.depth_intrinsics(capture)
-    pts = _accumulate(capture, cfg, idxs, intr, convention, cfg.px_stride)
+
+    # Bound the raw point count. Voxel downsampling tens of millions of points
+    # blows up memory, so if the frame budget is too dense we subsample pixels.
+    px = cfg.px_stride
+    if capture.depth_size is not None:
+        dw, dh = capture.depth_size
+        est = len(idxs) * dw * dh / (px * px)
+        if est > cfg.max_raw_points:
+            px = max(px, math.ceil(math.sqrt(len(idxs) * dw * dh / cfg.max_raw_points)))
+    pts = _accumulate(capture, cfg, idxs, intr, convention, px)
 
     if len(pts) == 0:
         raise ValueError(
@@ -144,7 +153,7 @@ def fuse(capture: record3d.Record3DCapture, cfg: Settings, verbose: bool = False
         )
     if verbose:
         bb = pcd.get_axis_aligned_bounding_box()
-        print(f"[fusion] convention={convention} frames={len(idxs)} "
+        print(f"[fusion] convention={convention} frames={len(idxs)} px_stride={px} "
               f"pts_raw={len(pts)} pts_clean={len(pcd.points)}")
         print(f"[fusion] bbox extent={np.round(bb.get_extent(), 3)} (Z is up)")
     return pcd

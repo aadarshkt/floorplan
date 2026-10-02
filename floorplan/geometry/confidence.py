@@ -22,6 +22,17 @@ def bracket(value: float, ci: list[float]) -> list[float]:
     return [round(float(min(value, ci[0])), 4), round(float(max(value, ci[1])), 4)]
 
 
+def interval(value: float, ci: list[float], min_half: float = 0.0) -> list[float]:
+    """Bracket the value and widen to at least ``min_half`` on each side."""
+    lo = min(float(value), float(ci[0]))
+    hi = max(float(value), float(ci[1]))
+    if float(value) - lo < min_half:
+        lo = float(value) - min_half
+    if hi - float(value) < min_half:
+        hi = float(value) + min_half
+    return [round(lo, 4), round(hi, 4)]
+
+
 def bootstrap_length(points_xyz: np.ndarray, cfg: Settings,
                      sample_cap: int = 20000) -> list[float] | None:
     """Bootstrap the 2D extent (length) of a wall's inlier points."""

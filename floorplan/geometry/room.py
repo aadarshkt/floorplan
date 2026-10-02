@@ -145,7 +145,7 @@ def ceiling_height(floor_z: float, ceil_z: float, observed: bool,
     else:
         ci = [round(height - 0.15, 3), round(height + 0.15, 3)]
         method = "inferred_from_wall_tops"
-    return Measurement(round(height, 3), confidence.bracket(height, ci), method)
+    return Measurement(round(height, 3), confidence.interval(height, ci, cfg.ci_floor_height_m), method)
 
 
 def property_area(floor_pts: np.ndarray, cfg: Settings) -> Measurement:
@@ -157,7 +157,9 @@ def property_area(floor_pts: np.ndarray, cfg: Settings) -> Measurement:
     except Exception:
         return Measurement(0.0, [0.0, 0.0], "none")
     ci = confidence.bootstrap_hull_area(floor_pts[:, :2], cfg) or [value * 0.97, value * 1.03]
-    return Measurement(round(value, 3), confidence.bracket(value, ci), "bootstrap_hull")
+    return Measurement(round(value, 3),
+                       confidence.interval(value, ci, cfg.ci_floor_area_rel * value),
+                       "bootstrap_hull")
 
 
 def assemble(walls: list[Wall], floor_z: float, ceil_z: float, observed: bool,
@@ -180,7 +182,7 @@ def assemble(walls: list[Wall], floor_z: float, ceil_z: float, observed: bool,
     area_ci = confidence.bootstrap_hull_area(floor_pts[:, :2], cfg) if len(floor_pts) >= 10 else None
     if area_ci is None:
         area_ci = [round(area_val * 0.97, 3), round(area_val * 1.03, 3)]
-    area_ci = confidence.bracket(area_val, area_ci)
+    area_ci = confidence.interval(area_val, area_ci, cfg.ci_floor_area_rel * area_val)
 
     height = ceil_z - floor_z
     height_meas = ceiling_height(floor_z, ceil_z, observed, floor_pts, ceil_pts, cfg)

@@ -28,7 +28,7 @@ def build_payload(capture_id: str, tier: str, rooms: list[Room],
         walls_payload = []
         for w in room.walls:
             ci = wall_ci.get(w.id) or [round(w.length * 0.995, 3), round(w.length * 1.005, 3)]
-            ci = confidence.bracket(w.length, ci)
+            ci = confidence.interval(w.length, ci, cfg.ci_floor_length_m)
             openings_payload = [
                 {
                     "opening_id": f"{rid}-w{w.id}-o{k}",

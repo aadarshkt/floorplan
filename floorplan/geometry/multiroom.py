@@ -125,7 +125,7 @@ def extract_rooms(walls: list[Wall], floor_z: float, ceil_z: float, observed: bo
                 pass
         if area_ci is None:
             area_ci = [round(area_val * 0.97, 3), round(area_val * 1.03, 3)]
-        area_ci = confidence.bracket(area_val, area_ci)
+        area_ci = confidence.interval(area_val, area_ci, cfg.ci_floor_area_rel * area_val)
 
         h = room_mod.ceiling_height(floor_z, ceil_z, observed, floor_pts, ceil_pts, cfg)
         rooms.append(room_mod.Room(

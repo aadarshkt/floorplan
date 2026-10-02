@@ -14,6 +14,7 @@ class Settings:
     # ── ingest / fusion ──────────────────────────────────────────────────────
     conf_min: int = 1            # keep depth pixels with confidence >= this (Record3D: 0/1/2)
     max_frames: int = 500        # cap frames fused (stride chosen to fit); plenty for a room
+    max_raw_points: int = 6_000_000  # bound on unprojected points (memory/speed guard)
     px_stride: int = 1           # subsample depth pixels (1 = every pixel)
     depth_min_m: float = 0.10    # discard depths closer than this
     depth_max_m: float = 8.0     # discard depths beyond this (LiDAR range)
@@ -57,6 +58,11 @@ class Settings:
     # ── confidence intervals ─────────────────────────────────────────────────
     bootstrap_n: int = 200
     ci_level: float = 0.95
+    # width floor: bootstrap captures sampling noise; unmodelled systematic error
+    # (LiDAR depth bias, plane fit) needs a floor for honest calibration.
+    ci_floor_length_m: float = 0.010
+    ci_floor_height_m: float = 0.005
+    ci_floor_area_rel: float = 0.010
 
     # ── photo / video tiers ──────────────────────────────────────────────────
     engine: str = "auto"             # auto | monodepth | colmap
