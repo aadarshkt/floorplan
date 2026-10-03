@@ -12,8 +12,14 @@ import numpy as np
 
 # scale_reference values
 NATIVE_METRIC = "native_metric"          # sensor gave metres directly (LiDAR)
+METRIC_MODEL = "metric_model"            # learned metric depth: metres, no external anchor
 SCALED = "scaled_via_reference"          # anchored to a known length / metric capture
 NONE_PRIOR = "none_prior"                # no reference: default prior, non-metric
+
+
+def is_metric(scale_reference: str) -> bool:
+    """True when the cloud is already in metres (no pending anchor to apply)."""
+    return scale_reference != NONE_PRIOR
 
 
 @dataclass

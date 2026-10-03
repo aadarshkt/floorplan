@@ -18,7 +18,7 @@ from floorplan import drift as drift_mod
 from floorplan.config import Settings
 from floorplan.export import dxf, json_export, provenance, svg
 from floorplan.fusion import arbiter, colmap_path, depth_fusion, monodepth, scale
-from floorplan.fusion.ir import NATIVE_METRIC, NONE_PRIOR, SCALED, Reconstruction
+from floorplan.fusion.ir import NATIVE_METRIC, NONE_PRIOR, Reconstruction, is_metric
 from floorplan.geometry import align
 from floorplan.geometry import confidence
 from floorplan.geometry import multiroom
@@ -94,6 +94,16 @@ def _run_photo_video(capture_path: str | Path, out: Path, cfg: Settings,
     if verbose:
         print(f"[ingest] {tier}: {photos.n_images} images from {photos.capture_id}")
 
+    # Engine resolution. `auto` prefers metric monocular depth, but if its backend
+    # (torch + transformers) is not installed we fall back to the pure-CPU COLMAP
+    # path, so the tier still runs on a machine with no GPU and no torch.
+    engine = cfg.engine
+    if engine == "auto" and "metric_depth" not in monodepth.available_backends():
+        engine = "colmap"
+        if verbose:
+            print("[engine] metric-depth backend unavailable "
+                  "(install: scripts/fetch_weights.sh); falling back to the CPU COLMAP path")
+
     # Optional cross-tier reference: a metric capture of the same room.
     reference_points = None
     if cfg.reference_capture:
@@ -108,33 +118,30 @@ def _run_photo_video(capture_path: str | Path, out: Path, cfg: Settings,
     failures: list[str] = []
     t0 = time.time()
 
-    # COLMAP is opt-in (--engine colmap). On machines without CUDA its dense MVS
-    # is unavailable and the CPU path is coarse, so the default photo/video path
-    # is monocular depth (learned model if installed, else the paired reference).
-    if cfg.engine == "colmap":
-        if not colmap_path.available():
-            failures.append("colmap: not on PATH")
-        else:
-            try:
-                cr = colmap_path.reconstruct(photos, cfg, out / "colmap", verbose)
-                pts, s, ref, notes = scale.anchor(cr.points, cfg, reference_points)
-                candidates.append(Reconstruction(
-                    points=pts, tier=tier,
-                    path_chosen=f"colmap:{cr.dense}",
-                    scale_reference=ref, scale_factor=s, conf=cr.conf,
-                    notes={**notes, "registered": cr.n_registered, "images": cr.n_images,
-                           "points_raw": cr.n_points, "camera_centres": cr.centres,
-                           "up_hint": cr.up_hint}))
-            except Exception as exc:
-                failures.append(f"colmap: {exc}")
-                if verbose:
-                    print(f"[colmap] failed: {exc}")
+    # Camera poses. Both the COLMAP path and the metric-depth fusion need them,
+    # and the photos/video carry none: COLMAP derives them from the images
+    # themselves. For the metric path we only want poses, so the dense
+    # MVS/plane-sweep stages are skipped there.
+    sfm: colmap_path.ColmapResult | None = None
+    if colmap_path.available() and photos.n_images >= 2:
+        try:
+            if engine == "colmap":
+                sfm = colmap_path.reconstruct(photos, cfg, out / "colmap", verbose)
+            else:
+                sfm = colmap_path.reconstruct(
+                    photos, replace(cfg, colmap_dense=False, mvs_enable=False),
+                    out / "colmap", verbose)
+        except Exception as exc:
+            failures.append(f"sfm: {exc}")
+            if verbose:
+                print(f"[sfm] failed: {exc}")
 
-    if cfg.engine in ("auto", "monodepth"):
+    # Metric monocular depth fused through those poses (the default path).
+    if engine in ("auto", "monodepth"):
         try:
             r = monodepth.reconstruct(photos, cfg, out, reference_points=reference_points,
-                                      verbose=verbose)
-            if r.scale_reference != SCALED:  # relative/unscaled: anchor it
+                                      sfm=sfm, verbose=verbose)
+            if not is_metric(r.scale_reference):  # unscaled: anchor it to something
                 pts, s, ref, notes = scale.anchor(r.points, cfg, reference_points)
                 r = replace(r, points=pts, scale_reference=ref, scale_factor=s,
                             notes={**r.notes, **notes})
@@ -143,6 +150,20 @@ def _run_photo_video(capture_path: str | Path, out: Path, cfg: Settings,
             failures.append(f"monodepth: {exc}")
             if verbose:
                 print(f"[monodepth] failed: {exc}")
+
+    # COLMAP geometry (SfM + dense MVS / plane-sweep): the explicit engine, and
+    # always the fallback when the monocular path produced nothing.
+    if engine == "colmap" or (not candidates and sfm is not None):
+        if sfm is None:
+            failures.append("colmap: no reconstruction")
+        else:
+            pts, s, ref, notes = scale.anchor(sfm.points, cfg, reference_points)
+            candidates.append(Reconstruction(
+                points=pts, tier=tier, path_chosen=f"colmap:{sfm.dense}",
+                scale_reference=ref, scale_factor=s, conf=sfm.conf,
+                notes={**notes, "registered": sfm.n_registered, "images": sfm.n_images,
+                       "points_raw": sfm.n_points, "camera_centres": sfm.centres,
+                       "up_hint": sfm.up_hint}))
 
     timings["fusion"] = time.time() - t0
     if not candidates:
@@ -157,7 +178,8 @@ def _run_photo_video(capture_path: str | Path, out: Path, cfg: Settings,
                       ci_floor_height_m=cfg.ci_floor_height_m * cfg.ci_none_prior_scale,
                       ci_floor_area_rel=cfg.ci_floor_area_rel * cfg.ci_none_prior_scale)
 
-    drift_info = {"method": "sfm_bundle_adjustment" if "colmap" in recon.path_chosen else "none",
+    used_sfm = recon.notes.get("poses") == "colmap_sfm" or "colmap" in recon.path_chosen
+    drift_info = {"method": "sfm_bundle_adjustment" if used_sfm else "none",
                   "n_loops": 0, "correction_applied": False,
                   "ablation": {"on": None, "off": None}}
     above = recon.notes.get("camera_centres")
@@ -181,8 +203,20 @@ def _geometry_and_export(pts: np.ndarray, capture_id: str, tier: str, out: Path,
             up = align.estimate_up(pts, cfg, above_points=above_points)
             apply = 0.5 < up[2] < 1.0 - 1e-4   # gravity-aligned: modest tilt only
         elif tier in ("photos", "video"):
-            # arbitrary SfM frame: pick the up axis that best squares up the room
-            up = align.choose_up(pts, cfg, hint=up_hint, above_points=above_points)
+            # Arbitrary SfM frame. The mean camera-up (image -y mapped to world,
+            # averaged over the poses) is the most reliable gravity estimate; fall
+            # back to plane-based selection only when there is no pose hint.
+            if up_hint is not None and float(np.linalg.norm(up_hint)) > 1e-6:
+                up = np.asarray(up_hint, dtype=float)
+                up = up / float(np.linalg.norm(up))
+                if above_points is not None and len(above_points):
+                    Rz = align.rotation_to_z(up)
+                    zc = float(np.mean(above_points @ Rz.T[:, 2]))
+                    zf = float(np.percentile(pts @ Rz.T[:, 2], 5))
+                    if zc < zf + 0.3:      # cameras sit above the floor
+                        up = -up
+            else:
+                up = align.choose_up(pts, cfg, hint=up_hint, above_points=above_points)
             apply = True
         else:
             up = align.estimate_up(pts, cfg, above_points=above_points)

@@ -7,7 +7,9 @@ pipeline runs, and reports.
 
 ```
 benchmark/
-  manifest.json            which captures to score, and the gate thresholds
+  manifest.json            all three tiers at once (hybrid) + gate thresholds
+  manifest.photos.json     photos tier only
+  manifest.video.json      video tier only
   CAPTURE.md               how to capture (Record3D) and unpack a .r3d
   unpack_r3d.py            .r3d -> dataset folder
   captures/<id>/           raw input (Record3D export folder, or a .zip)
@@ -49,6 +51,103 @@ The second line, `Overall: X/Y captures passed`, is the stricter per-capture
 
 `--runs` (default `<out>/runs`) is where per-capture `results.json` live; they are
 reused unless `--force`. `--ablate-drift` adds the drift on/off comparison.
+
+## The three configurations
+
+Every tier runs **independently** — none borrows another capture's data.
+
+- **photos** — a folder of stills, "no depth, no poses".
+- **video** — a handheld walkthrough clip.
+- **hybrid** — the `.r3d` bundle, which carries all three streams (LiDAR depth +
+  odometry, the RGB clip, and stills).
+
+Photos and video run **metric monocular depth fused through COLMAP SfM poses**:
+COLMAP recovers the camera poses and intrinsics from the images, and a *metric*
+depth model (Depth Anything V2 Metric, Indoor) supplies absolute metres per
+pixel. Both scale and poses therefore come from the images alone — no LiDAR
+capture and no `--scale-ref` are needed. Provenance shows
+`path_chosen: metric_depth:sfm_fused` and `scale_reference: metric_model`.
+
+Install the model once (torch + transformers; a GPU is much faster but not
+required):
+
+```bash
+scripts/fetch_weights.sh
+```
+
+```bash
+# 1. photos only
+./.venv/bin/floorplan bench --manifest benchmark/manifest.photos.json \
+    --out benchmark/reports/photos --force
+
+# 2. video only
+./.venv/bin/floorplan bench --manifest benchmark/manifest.video.json \
+    --out benchmark/reports/video --force
+
+# 3. hybrid — all three streams from the one .r3d bundle
+./.venv/bin/floorplan bench --manifest benchmark/manifest.json \
+    --out benchmark/reports/hybrid --force
+```
+
+Or one capture at a time (`run` produces artifacts, `bench` scores them):
+
+```bash
+D=benchmark/captures/2026-10-03--00-39-56
+./.venv/bin/floorplan run $D --tier lidar  --out benchmark/runs/lidar     # depth + odometry
+./.venv/bin/floorplan run $D/rgb.mp4 --tier video --out benchmark/runs/video
+./.venv/bin/floorplan run benchmark/captures/photos_2026-10-03--00-39-56 \
+    --tier photos --out benchmark/runs/photos
+```
+
+Notes:
+
+- `--engine auto` (default) is the metric-depth path above. `--engine colmap`
+  swaps in COLMAP's dense MVS instead (provenance shows `colmap:mvs` /
+  `colmap:cpu_mvs`); `--engine monodepth` forces the metric model or errors.
+- `--reference-capture <r3d>` remains the cross-tier fallback when a LiDAR twin
+  exists. The independent configs above do **not** use it — that is the whole
+  point.
+- Gate tolerances differ by tier in the assignment (photos ±8%, video ±3%). The
+  defaults in `manifest.json → gates` are tighter absolute-cm values; override
+  per manifest if you want the tier-specific numbers, e.g.
+  `"gates": {"area_rel_pct": 8.0}`.
+
+## Analyze a single capture
+
+`floorplan run` produces the artifacts but does **not** score them. To see the
+accuracy of one capture on its own, score it with a one-entry manifest — then
+nothing is pooled with the other tiers.
+
+```bash
+# 1. one-entry manifest (tier can be lidar | photos | video)
+cat > benchmark/manifest.lidar.json <<'JSON'
+{
+  "units": "meters",
+  "captures": [
+    { "id": "lidar", "path": "captures/2026-10-03--00-39-56", "tier": "lidar",
+      "room_id": "room1", "ground_truth": "ground_truth/2026-10-03--00-39-56.json" }
+  ]
+}
+JSON
+
+# 2. score that one capture
+./.venv/bin/floorplan bench --manifest benchmark/manifest.lidar.json \
+    --out benchmark/reports/lidar-only --force
+
+# 3. read it
+cat benchmark/reports/lidar-only/report.md      # Accuracy line + gate table
+cat benchmark/reports/lidar-only/gates.json     # same, machine-readable
+cat benchmark/reports/lidar-only/runs/lidar/results.json   # raw measurements + ci95
+```
+
+Swap `path`/`tier` for the other tiers:
+
+| tier | `path` | extra flags |
+|---|---|---|
+| photos | `captures/photos_2026-10-03--00-39-56` | `--reference-capture benchmark/captures/2026-10-03--00-39-56` |
+| video | `captures/2026-10-03--00-39-56/rgb.mp4` | `--reference-capture benchmark/captures/2026-10-03--00-39-56` |
+
+For artifacts only (no scoring): `./.venv/bin/floorplan run <capture> --out <dir>`.
 
 ## Ground-truth format (measure these with the laser/tape)
 

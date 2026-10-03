@@ -117,6 +117,8 @@ def test_monodepth_cross_tier_returns_reference(tmp_path):
     Image.new("RGB", (32, 24), (5, 5, 5)).save(folder / "0.png")
     ps = photos.load(folder)
     ref = _room_cloud()
-    r = monodepth.reconstruct(ps, Settings(), tmp_path, reference_points=ref)
+    # Force the cross-tier branch (engine="colmap" skips the metric-depth backend,
+    # which may or may not be installed).
+    r = monodepth.reconstruct(ps, Settings(engine="colmap"), tmp_path, reference_points=ref)
     assert r.scale_reference == SCALED
     assert len(r.points) == len(ref)

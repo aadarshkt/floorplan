@@ -1,0 +1,12 @@
+{
+  "units": "meters",
+  "captures": [
+    {
+      "id": "photos",
+      "path": "captures/photos_2026-10-03--00-39-56",
+      "tier": "photos",
+      "room_id": "room1",
+      "ground_truth": "ground_truth/2026-10-03--00-39-56.json"
+    }
+  ]
+}

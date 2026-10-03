@@ -1,0 +1,12 @@
+{
+  "units": "meters",
+  "captures": [
+    {
+      "id": "video",
+      "path": "captures/2026-10-03--00-39-56/rgb.mp4",
+      "tier": "video",
+      "room_id": "room1",
+      "ground_truth": "ground_truth/2026-10-03--00-39-56.json"
+    }
+  ]
+}

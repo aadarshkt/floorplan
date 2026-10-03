@@ -21,6 +21,8 @@ def _settings_from_args(a: argparse.Namespace) -> Settings:
         cfg.max_frames = a.max_frames
     if getattr(a, "engine", None):
         cfg.engine = a.engine
+    if getattr(a, "device", None):
+        cfg.device = a.device
     if getattr(a, "scale_ref", None) is not None:
         cfg.scale_ref_m = a.scale_ref
     if getattr(a, "scale_ref_kind", None):
@@ -37,6 +39,8 @@ def _settings_from_args(a: argparse.Namespace) -> Settings:
 def _add_recon_flags(p: argparse.ArgumentParser) -> None:
     p.add_argument("--engine", default=None, choices=["auto", "monodepth", "colmap"],
                    help="photo/video reconstruction engine (default auto)")
+    p.add_argument("--device", default=None, choices=["auto", "cpu", "mps", "cuda"],
+                   help="inference device for the monocular-depth model (default auto)")
     p.add_argument("--scale-ref", type=float, default=None,
                    help="known real-world length (m) used to anchor photo/video scale")
     p.add_argument("--scale-ref-kind", default=None,

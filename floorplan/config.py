@@ -66,6 +66,11 @@ class Settings:
 
     # ── photo / video tiers ──────────────────────────────────────────────────
     engine: str = "auto"             # auto | monodepth | colmap
+    device: str = "auto"             # auto | cpu | mps | cuda (monocular-depth inference)
+    # Metric monocular depth: the independent photo/video geometry source. The
+    # indoor metric variant returns metres directly, so no anchor is needed.
+    metric_model_id: str = "depth-anything/Depth-Anything-V2-Metric-Indoor-Small-hf"
+    metric_max_points: int = 4_000_000   # cap on the fused metric cloud
     scale_ref_m: float | None = None  # known real-world length for scale anchoring
     scale_ref_kind: str = "door_width"
     default_ceiling_m: float = 2.5    # fallback when the ceiling was never observed

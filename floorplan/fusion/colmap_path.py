@@ -33,6 +33,8 @@ class ImagePose:
     R: np.ndarray      # (3,3) world -> camera
     t: np.ndarray      # (3,)  world -> camera:  X_cam = R X_world + t
     centre: np.ndarray  # (3,)  camera centre in world (-R^T t)
+    obs_xy: np.ndarray | None = None    # (M,2) observed keypoint pixels
+    obs_xyz: np.ndarray | None = None   # (M,3) matching sparse world points
 
 
 @dataclass
@@ -129,6 +131,7 @@ def _parse_txt_model(model_dir: Path, verbose: bool
           "--output_path", str(txt), "--output_type", "TXT"], verbose)
 
     xyz, errs = [], []
+    pts_by_id: dict[int, int] = {}
     p = txt / "points3D.txt"
     if p.exists():
         for line in p.read_text().splitlines():
@@ -137,21 +140,48 @@ def _parse_txt_model(model_dir: Path, verbose: bool
             parts = line.split()
             if len(parts) < 8:
                 continue
+            pts_by_id[int(parts[0])] = len(xyz)
             xyz.append([float(parts[1]), float(parts[2]), float(parts[3])])
             errs.append(float(parts[7]))
 
     images: list[ImagePose] = []
     q = txt / "images.txt"
     if q.exists():
-        rows = [ln for ln in q.read_text().splitlines() if ln and not ln.startswith("#")]
-        for i in range(0, len(rows), 2):
-            parts = rows[i].split()
+        # Pose lines (10 fields) and their following 2D-observation lines alternate;
+        # we must keep blank observation lines to stay aligned.
+        raw = q.read_text().splitlines()
+        i = 0
+        while i < len(raw):
+            s = raw[i].strip()
+            if not s or s.startswith("#"):
+                i += 1
+                continue
+            parts = s.split()
             if len(parts) < 10:
+                i += 1
                 continue
             qw, qx, qy, qz, tx, ty, tz = (float(v) for v in parts[1:8])
             R = _quat_wxyz_to_R(qw, qx, qy, qz)
             t = np.array([tx, ty, tz])
-            images.append(ImagePose(name=parts[9], R=R, t=t, centre=-R.T @ t))
+            i += 1
+            obs_xy, obs_xyz = [], []
+            if i < len(raw):
+                toks = raw[i].split()
+                for k in range(0, len(toks) - 2, 3):
+                    try:
+                        px, py, pid = float(toks[k]), float(toks[k + 1]), int(toks[k + 2])
+                    except ValueError:
+                        break
+                    j = pts_by_id.get(pid)
+                    if j is not None:
+                        obs_xy.append([px, py])
+                        obs_xyz.append(xyz[j])
+            i += 1
+            images.append(ImagePose(
+                name=parts[9], R=R, t=t, centre=-R.T @ t,
+                obs_xy=np.asarray(obs_xy, dtype=np.float64) if obs_xy else None,
+                obs_xyz=np.asarray(obs_xyz, dtype=np.float64) if obs_xyz else None,
+            ))
 
     K, size = _parse_cameras(txt / "cameras.txt") if (txt / "cameras.txt").exists() else (np.eye(3), (0, 0))
     return (np.asarray(xyz, dtype=np.float64), np.asarray(errs, dtype=np.float64),
