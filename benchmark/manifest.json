@@ -2,11 +2,11 @@
   "units": "meters",
   "captures": [
     {
-      "id": "capture_2026-10-03",
-      "path": "../benchmark_data/2026-10-03--00-39-56",
+      "id": "2026-10-03--00-39-56",
+      "path": "captures/2026-10-03--00-39-56",
       "tier": "lidar",
       "room_id": "room1",
-      "ground_truth": "ground_truth/capture_2026-10-03.json"
+      "ground_truth": "ground_truth/2026-10-03--00-39-56.json"
     }
   ]
 }

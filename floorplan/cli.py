@@ -54,9 +54,11 @@ def main(argv: list[str] | None = None) -> int:
 
     b = sub.add_parser("bench", help="run the benchmark manifest and score gates")
     b.add_argument("--manifest", required=True, help="benchmark manifest (.json)")
-    b.add_argument("--out", required=True, help="output directory for the report")
-    b.add_argument("--reuse", default=None,
-                   help="directory of cached <capture_id>/results.json to reuse")
+    b.add_argument("--out", required=True, help="report output directory (gates.json, report.md)")
+    b.add_argument("--runs", default=None,
+                   help="where per-capture pipeline outputs live (default: <out>/runs). "
+                        "Existing results.json here are reused unless --force")
+    b.add_argument("--force", action="store_true", help="re-run the pipeline for every capture")
     b.add_argument("--conf-min", type=int, default=None)
     b.add_argument("--max-frames", type=int, default=None)
     b.add_argument("--no-drift-correction", action="store_true")
@@ -81,8 +83,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "bench":
         cfg = _settings_from_args(args)
         try:
-            bench.run(args.manifest, args.out, reuse_dir=args.reuse, cfg=cfg,
-                      verbose=not args.quiet, ablate_drift=args.ablate_drift)
+            bench.run(args.manifest, args.out, runs_dir=args.runs, cfg=cfg,
+                      verbose=not args.quiet, ablate_drift=args.ablate_drift,
+                      force=args.force)
         except Exception as exc:
             print(f"error: {type(exc).__name__}: {exc}", file=sys.stderr)
             return 1

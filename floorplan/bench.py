@@ -128,9 +128,35 @@ def evaluate_repeatability(room_id: str, a: dict, b: dict, gates: dict) -> dict:
     return {"room_id": room_id, **r, "passed": passed}
 
 
+def pooled_accuracy(per_capture: list[dict], gates: dict) -> dict:
+    """Single headline accuracy: the share of individual measurements (matched
+    wall lengths, ceiling height, matched opening widths, floor area) that fall
+    within their gate tolerance, pooled across all captures."""
+    within = total = 0
+    for c in per_capture:
+        wl = c["wall_length"]
+        if wl["errors_cm"]:
+            total += len(wl["errors_cm"])
+            within += sum(1 for e in wl["errors_cm"] if e <= gates["wall_length_max_abs_cm"])
+        ce = c["ceiling_height"]
+        if ce["abs_cm"] is not None:
+            total += 1
+            within += 1 if ce["abs_cm"] <= gates["ceiling_height_abs_cm"] else 0
+        op = c["openings"]
+        if op["errors_cm"]:
+            total += len(op["errors_cm"])
+            within += op["within_tol"]
+        ar = c["area"]
+        if ar["rel_pct"] is not None:
+            total += 1
+            within += 1 if ar["rel_pct"] <= gates["area_rel_pct"] else 0
+    return {"within": within, "total": total,
+            "accuracy": round(within / total, 3) if total else 0.0}
+
+
 def run(manifest_path: str | Path, out_dir: str | Path,
-        reuse_dir: str | Path | None = None, cfg: Settings | None = None,
-        verbose: bool = True, ablate_drift: bool = False) -> dict:
+        runs_dir: str | Path | None = None, cfg: Settings | None = None,
+        verbose: bool = True, ablate_drift: bool = False, force: bool = False) -> dict:
     cfg = cfg or Settings()
     manifest_path = Path(manifest_path)
     base = manifest_path.parent
@@ -138,7 +164,7 @@ def run(manifest_path: str | Path, out_dir: str | Path,
     gates = {**DEFAULT_GATES, **manifest.get("gates", {})}
 
     out = Path(out_dir)
-    cache = out / "captures"
+    cache = Path(runs_dir) if runs_dir else (out / "runs")
     cache.mkdir(parents=True, exist_ok=True)
 
     per_capture: list[dict] = []
@@ -147,8 +173,8 @@ def run(manifest_path: str | Path, out_dir: str | Path,
 
     for entry in manifest["captures"]:
         cid = entry["id"]
-        cached = Path(reuse_dir) / cid / "results.json" if reuse_dir else None
-        if cached and cached.exists():
+        cached = cache / cid / "results.json"
+        if cached.exists() and not force:
             result = json.loads(cached.read_text())
         else:
             result = pipeline.run(_resolve(base, entry["path"]), cache / cid,
@@ -172,6 +198,7 @@ def run(manifest_path: str | Path, out_dir: str | Path,
     coverage = (sum(1 for _, gt_v, lo, hi in ci_samples if lo <= gt_v <= hi) / n_ci
                 if n_ci else 0.0)
     passed_n = sum(1 for c in per_capture if c["passed"])
+    accuracy = pooled_accuracy(per_capture, gates)
 
     ablations: list[dict] = []
     if ablate_drift:
@@ -209,6 +236,7 @@ def run(manifest_path: str | Path, out_dir: str | Path,
         "captures_total": len(per_capture),
         "captures_passed": passed_n,
         "pass_rate": round(passed_n / max(len(per_capture), 1), 3),
+        "accuracy": accuracy,
         "repeatability_passed": sum(1 for r in repeat if r["passed"]),
         "ci": {"n": n_ci, "coverage": round(coverage, 3),
                "meets_target": coverage >= gates["ci_coverage_min"] if n_ci else False},
@@ -223,5 +251,7 @@ def run(manifest_path: str | Path, out_dir: str | Path,
 
     if verbose:
         print(f"[bench] {passed_n}/{len(per_capture)} captures passed; "
-              f"CI coverage {coverage*100:.0f}%. Wrote {out/'gates.json'}")
+              f"accuracy {accuracy['within']}/{accuracy['total']} "
+              f"({accuracy['accuracy']*100:.0f}%); CI coverage {coverage*100:.0f}%. "
+              f"Wrote {out/'gates.json'}")
     return summary

@@ -1,31 +1,56 @@
 # Benchmark
 
-This directory defines *what correct means*. The harness (`floorplan bench`)
-runs every capture in a manifest, compares the produced plan to laser/tape ground
-truth, and gates the result.
+Everything for scoring lives under this one folder: raw captures, ground truth,
+pipeline runs, and reports.
 
-## Files
+## Layout
 
-- `manifest.template.json` — copy this and fill it in for a real benchmark.
-- `ground_truth/TEMPLATE.json` — the per-room measured truth.
-- `manifest.example.json` + `ground_truth/example_*.json` — a runnable demo using
-  the three provided scans with **placeholder** ground truth. The numbers are
-  derived from the pipeline output, so they are NOT real measurements; replace
-  them with tape/laser values. They exist only to exercise the harness.
-
-## How to run
-
-```bash
-./.venv/bin/floorplan bench --manifest benchmark/manifest.json --out reports/before
+```
+benchmark/
+  manifest.json            which captures to score, and the gate thresholds
+  CAPTURE.md               how to capture (Record3D) and unpack a .r3d
+  unpack_r3d.py            .r3d -> dataset folder
+  captures/<id>/           raw input (Record3D export folder, or a .zip)
+  ground_truth/<id>.json   your laser/tape measurements   <-- EDIT THIS
+  runs/<id>/               pipeline output per capture (results.json, svg, dxf, ply, provenance)
+  reports/<tag>/           scores: gates.json + report.md
 ```
 
-Optional:
+## The single accuracy number
 
-- `--reuse <dir>` — reuse cached `<capture_id>/results.json` (fast re-scoring;
-  used by the fix loop's before/after runs).
-- `--conf-min`, `--max-frames` — pipeline overrides applied to every capture.
+`report.md` leads with:
 
-## Ground-truth format (what to measure with the laser)
+```
+Accuracy: NN%   (within/total measurements within tolerance)
+```
+
+That is **the** accuracy number. Across every scored quantity — each wall length,
+the ceiling height, each opening width, and the floor area — it is the share that
+lands inside its gate tolerance. 100% means every measurement is within spec.
+The second line, `Overall: X/Y captures passed`, is the stricter per-capture
+"all gates at once" view.
+
+## Run it
+
+```bash
+# score the captures: writes runs/<id>/ and benchmark/{gates.json,report.md}
+./.venv/bin/floorplan bench --manifest benchmark/manifest.json --out benchmark
+
+# force a full pipeline re-run (ignore cached results.json)
+./.venv/bin/floorplan bench --manifest benchmark/manifest.json --out benchmark --force
+
+# fix loop: shared runs/, before and after a code fix
+./.venv/bin/floorplan bench --manifest benchmark/manifest.json \
+    --out benchmark/reports/before --runs benchmark/runs
+#   ...ship a fix (a real commit)...
+./.venv/bin/floorplan bench --manifest benchmark/manifest.json \
+    --out benchmark/reports/after  --runs benchmark/runs --force
+```
+
+`--runs` (default `<out>/runs`) is where per-capture `results.json` live; they are
+reused unless `--force`. `--ablate-drift` adds the drift on/off comparison.
+
+## Ground-truth format (measure these with the laser/tape)
 
 ```json
 {
@@ -42,9 +67,9 @@ Optional:
 
 Wall lengths and openings are **unordered sets** — the harness matches produced
 elements to measured ones with an optimal (Hungarian) assignment, so it never
-penalises the model for ordering.
+penalises ordering. See `ground_truth/TEMPLATE.json`.
 
-## What the harness measures, and how it maps to the code
+## Gate reference
 
 | Gate | Produced by | Ground truth |
 |---|---|---|
@@ -54,9 +79,3 @@ penalises the model for ordering.
 | `area_rel_pct` | `rooms[].floor_area_m2.value` | `floor_area_m2` |
 | `repeatability_*` | two runs of the same room | (none — self-comparison) |
 | `ci_coverage_min` | all `ci95` intervals | whether the true value falls inside |
-
-## Outputs
-
-- `reports/<tag>/gates.json` — machine-readable: per-capture checks, summary.
-- `reports/<tag>/report.md` — the human table for the write-up.
-- `reports/<tag>/captures/<id>/` — every run's full artifact set.

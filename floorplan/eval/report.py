@@ -21,6 +21,11 @@ def to_markdown(manifest_name: str, per_capture: list[dict],
     lines.append(f"**Overall: {summary['captures_passed']}/{summary['captures_total']} captures "
                  f"passed all gates ({summary['pass_rate']*100:.0f}%)**")
     lines.append("")
+    acc = summary.get("accuracy")
+    if acc:
+        lines.append(f"**Accuracy: {acc['accuracy']*100:.0f}%** "
+                     f"({acc['within']}/{acc['total']} measurements within tolerance)")
+    lines.append("")
     lines.append("## Per-capture gates")
     lines.append("")
     lines.append("| capture | room | walls max/mean (cm) | ceiling (cm) | openings pass | area (%) | result |")

@@ -16,6 +16,11 @@
     "captures_total": 1,
     "captures_passed": 1,
     "pass_rate": 1.0,
+    "accuracy": {
+      "within": 10,
+      "total": 10,
+      "accuracy": 1.0
+    },
     "repeatability_passed": 0,
     "ci": {
       "n": 6,
@@ -26,7 +31,7 @@
   },
   "per_capture": [
     {
-      "capture_id": "capture_2026-10-03",
+      "capture_id": "2026-10-03--00-39-56",
       "room_id": "room1",
       "wall_length": {
         "n_produced": 4,

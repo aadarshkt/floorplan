@@ -2,10 +2,14 @@
 __pycache__/
 *.pyc
 *.pyo
-runs/
-data/
-benchmark_data/
 *.egg-info/
 .pytest_cache/
+.DS_Store
+data/
 floorplan_cache/
 *.ply
+
+# benchmark inputs/outputs (large, regenerable)
+benchmark/captures/
+benchmark/runs/
+benchmark/reports/*/runs/
