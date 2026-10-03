@@ -8,6 +8,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
+
 from floorplan.config import Settings
 from floorplan.geometry import confidence
 from floorplan.geometry.room import Room
@@ -17,19 +19,38 @@ def measurement(value: float, ci95: list[float], method: str = "bootstrap") -> d
     return {"value": round(float(value), 4), "ci95": ci95, "method": method}
 
 
+def widen(value: float, ci: list[float], rel: float = 0.0, floor: float = 0.0) -> list[float]:
+    """Combine sampling CI with systematic error: scale (relative) and a geometry floor.
+
+    Each side's half-width becomes hypot(sampling half, rel * value, floor), so an
+    interval reflects how far the tier can really be off, not just point noise.
+    """
+    v = float(value)
+    lo = (v - float(ci[0])) if ci else 0.0
+    hi = (float(ci[1]) - v) if ci else 0.0
+    sys = (rel * abs(v), floor)
+    return [round(v - float(np.hypot(max(lo, 0.0), np.hypot(*sys))), 4),
+            round(v + float(np.hypot(max(hi, 0.0), np.hypot(*sys))), 4)]
+
+
 def build_payload(capture_id: str, tier: str, rooms: list[Room],
                   wall_ci: dict[int, list[float]], cfg: Settings,
                   property_footprint: dict | None = None,
                   adjacency: list[dict] | None = None,
                   drift: dict | None = None,
-                  scale: dict | None = None) -> dict:
+                  scale: dict | None = None,
+                  scale_rel: float = 0.0) -> dict:
+    # tier geometry floors (95% half-widths), calibrated on the xbench residuals
+    floor_len = {"lidar": cfg.ci_sys_length_lidar, "video": cfg.ci_sys_length_video,
+                 "photos": cfg.ci_sys_length_photos}.get(tier, 0.0)
     rooms_payload = []
     for room in rooms:
         rid = room.room_id or "r1"
         walls_payload = []
         for w in room.walls:
             ci = wall_ci.get(w.id) or [round(w.length * 0.995, 3), round(w.length * 1.005, 3)]
-            ci = confidence.interval(w.length, ci, cfg.ci_floor_length_m)
+            ci = widen(w.length, confidence.interval(w.length, ci, cfg.ci_floor_length_m),
+                       scale_rel, floor_len)
             openings_payload = [
                 {
                     "opening_id": f"{rid}-w{w.id}-o{k}",
@@ -54,10 +75,15 @@ def build_payload(capture_id: str, tier: str, rooms: list[Room],
         rooms_payload.append({
             "room_id": rid,
             "polygon": room.polygon,
-            "floor_area_m2": measurement(room.floor_area_m2.value, room.floor_area_m2.ci95,
-                                         room.floor_area_m2.method),
+            "floor_area_m2": measurement(
+                room.floor_area_m2.value,
+                widen(room.floor_area_m2.value, room.floor_area_m2.ci95, 2 * scale_rel,
+                      2 * floor_len * float(np.sqrt(max(room.floor_area_m2.value, 0.0)))),
+                room.floor_area_m2.method),
             "ceiling_height_m": {
-                **measurement(room.ceiling_height_m.value, room.ceiling_height_m.ci95,
+                **measurement(room.ceiling_height_m.value,
+                              widen(room.ceiling_height_m.value, room.ceiling_height_m.ci95,
+                                    scale_rel, floor_len / 2),
                               room.ceiling_height_m.method),
                 "observed": room.ceiling_observed,
             },

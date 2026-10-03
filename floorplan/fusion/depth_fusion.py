@@ -9,8 +9,9 @@ Conventions (documented once, applied everywhere):
   * Record3D depth PNG values are millimetres along the camera +Z axis.
   * ARKit world is Y-up; we convert world (x, y, z) -> canonical Z-up (x, -z, y).
   * Pose convention: some exports store camera->world (c2w), others world->camera
-    (w2c). We auto-detect the convention that yields vertical walls / horizontal
-    floors, since getting it wrong shears the cloud (walls tilt, floors stay flat).
+    (w2c), and raw ARKit / .r3d poses use OpenGL camera axes (c2w_gl). We
+    auto-detect the one that yields vertical walls / horizontal floors: a wrong
+    choice shears the cloud or fans each frame around the camera.
 """
 from __future__ import annotations
 
@@ -67,12 +68,26 @@ def _frame_points(depth_png: np.ndarray, conf_png: np.ndarray | None,
 
 
 def _to_world(pc: np.ndarray, R: np.ndarray, t: np.ndarray, convention: str) -> np.ndarray:
-    if convention == "c2w":
+    if convention == "c2w_gl":
+        # ARKit / raw .r3d poses use OpenGL camera axes (y up, z backward); the
+        # unprojection is OpenCV (y down, z forward): flip y and z first.
+        world = (pc * np.array([1.0, -1.0, -1.0])) @ R.T + t
+    elif convention == "c2w":
         world = pc @ R.T + t
     else:  # w2c
         world = (pc - t) @ R
     # ARKit/Record3D world y-up (x,y,z) -> canonical Z-up (x, -z, y)
     return np.stack([world[:, 0], -world[:, 2], world[:, 1]], axis=1)
+
+
+def camera_centres(capture, convention: str) -> np.ndarray:
+    """Camera centres in the canonical Z-up frame (same transform as the cloud)."""
+    out = np.empty((capture.n_frames, 3))
+    for i in range(capture.n_frames):
+        R = quat_to_matrix(capture.quat[i])
+        t = capture.pos[i]
+        out[i] = -R.T @ t if convention == "w2c" else t
+    return np.stack([out[:, 0], -out[:, 2], out[:, 1]], axis=1)
 
 
 def _accumulate(capture, cfg: Settings, idxs, intr, convention: str, px_stride: int) -> np.ndarray:
@@ -107,7 +122,7 @@ def detect_pose_convention(capture, cfg: Settings, n_frames: int = 40) -> str:
     idxs = list(range(0, capture.n_frames, stride))
     intr = record3d.depth_intrinsics(capture)
     best_conv, best_score = "c2w", None
-    for conv in ("c2w", "w2c"):
+    for conv in ("c2w", "w2c", "c2w_gl"):
         pts = _accumulate(capture, cfg, idxs, intr, conv, px_stride=2)
         score = _convention_score(pts, cfg)
         if best_score is None or score < best_score:

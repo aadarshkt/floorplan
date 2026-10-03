@@ -99,9 +99,28 @@ def _px_stride(n_images: int, size: tuple[int, int] | None, budget: int) -> int:
     return max(1, int(np.ceil(np.sqrt((w * h) / per_image))))
 
 
+def _load_pipe(cfg: Settings, verbose: bool):
+    import torch
+    from transformers import pipeline
+
+    torch.set_num_threads(cfg.threads)
+
+    dev, dtype = pick_device(cfg)
+    if verbose:
+        print(f"[metric] {cfg.metric_model_id} on {dev.type}")
+    try:
+        return pipeline("depth-estimation", model=cfg.metric_model_id, device=dev, dtype=dtype)
+    except TypeError:  # older transformers
+        return pipeline("depth-estimation", model=cfg.metric_model_id, device=dev, torch_dtype=dtype)
+
+
 def reconstruct(photos: PhotoSet, cfg: Settings, workdir: Path,
                 sfm: ColmapResult | None = None,
                 max_dim: int = 1036, verbose: bool = False) -> Reconstruction:
+    if cfg.depth_fusion == "aligned" and sfm is not None and len(sfm.images) >= 2:
+        from floorplan.fusion import sfm_depth
+        return sfm_depth.reconstruct(photos, cfg, sfm, _load_pipe(cfg, verbose),
+                                     max_dim=max_dim, verbose=verbose)
     import torch
     from transformers import pipeline
 
@@ -121,12 +140,11 @@ def reconstruct(photos: PhotoSet, cfg: Settings, workdir: Path,
         if not entries:
             raise RuntimeError("COLMAP registered images do not map back to the input photos")
     else:
-        if photos.n_images > 1:
-            raise RuntimeError(
-                "metric-depth fusion needs camera poses, but none were recovered. "
-                "Capture more overlapping images, or fall back to --reference-capture / "
-                "--engine colmap.")
-        entries = [(None, photos.image_paths[0])]
+        # No poses (too few overlapping stills): fall back to one image so the tier
+        # still answers; scale is uncalibrated and intervals are widened downstream.
+        if verbose and photos.n_images > 1:
+            print("[metric] no SfM poses: single-image fallback (wide intervals)")
+        entries = [(None, photos.image_paths[photos.n_images // 2])]
 
     K = sfm.K if sfm is not None else None
     stride = _px_stride(len(entries), photos.size, cfg.metric_max_points)
@@ -223,6 +241,7 @@ def reconstruct(photos: PhotoSet, cfg: Settings, workdir: Path,
             "internal_scale": round(float(scale), 6),
             "camera_centres": (np.asarray([scale * im.centre for im, _ in entries])
                                if poses else None),
+            "camera_names": [im.name for im, _ in entries] if poses else None,
             "up_hint": sfm.up_hint if sfm is not None else None,
         },
     )

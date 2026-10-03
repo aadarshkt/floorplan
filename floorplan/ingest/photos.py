@@ -23,6 +23,7 @@ class PhotoSet:
     size: tuple[int, int] | None      # (w, h) of the first image
     f_px: float | None                # focal length in pixels (single-camera assumption)
     fov_deg: float | None
+    source_index: list[int] | None = None   # video tier: source frame number per image
 
     @property
     def n_images(self) -> int:
@@ -43,12 +44,8 @@ def _exif_focal_px(path: Path, size: tuple[int, int]) -> float | None:
             return float(f35) / 36.0 * w
         except (TypeError, ValueError):
             pass
-    fl = exif.get(37386)   # FocalLength (rational, mm)
-    if fl:
-        try:
-            return float(fl) / 36.0 * w  # treat as 35mm-equivalent fallback
-        except (TypeError, ValueError):
-            pass
+    # FocalLength (tag 37386) is the *physical* focal length (~6-7 mm on an iPhone);
+    # without the sensor width it cannot be converted to pixels, so it is not used.
     return None
 
 
@@ -77,6 +74,10 @@ def load(path: str | Path) -> PhotoSet:
     fov = None
     if size and not f_px:
         fov = DEFAULT_HFOV_DEG
+    # stills named by frame number (e.g. sampled from a Record3D clip) keep that
+    # number, so a photo run can be scored against the clip's LiDAR poses
+    stems = [p.stem for p in images]
+    source_index = [int(t) for t in stems] if all(t.isdigit() for t in stems) else None
     return PhotoSet(
         capture_id=root.name,
         root=root,
@@ -84,4 +85,5 @@ def load(path: str | Path) -> PhotoSet:
         size=size,
         f_px=f_px,
         fov_deg=fov,
+        source_index=source_index,
     )

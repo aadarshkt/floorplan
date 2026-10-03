@@ -60,16 +60,23 @@ def _density_floor_ceiling(points: np.ndarray, cfg: Settings) -> tuple[float, fl
     return floor_z, ceil_z, observed
 
 
-def floor_and_ceiling(planes: list, points: np.ndarray, cfg: Settings
+def floor_and_ceiling(planes: list, points: np.ndarray, cfg: Settings,
+                      cam_z: float | None = None
                       ) -> tuple[float, float, bool, np.ndarray, np.ndarray]:
     floor_z, ceil_z, observed = _density_floor_ceiling(points, cfg)
+    if cam_z is not None:
+        # A handheld phone is 1.0-1.8 m above the floor: the floor is the densest
+        # horizontal layer at least 0.9 m below the cameras (not a bed or table).
+        fz = _floor_below(points, cam_z, cfg)
+        if fz is not None:
+            floor_z = fz
 
     # With a noisy cloud the densest upper band is often a bed/wardrobe top, not
     # the ceiling. A horizontal RANSAC plane is a stronger witness: prefer the
     # highest sizable plane that sits at a plausible occupied height above the
     # floor. If there is none, the ceiling was never observed — say so honestly
     # rather than presenting a spurious dense band as the ceiling.
-    ceil_plane = _ceil_from_planes(planes, floor_z, cfg) if planes else None
+    ceil_plane = _ceil_from_planes(planes, floor_z, cfg, cam_z) if planes else None
     if ceil_plane is not None:
         ceil_z, observed = ceil_plane, True
     else:
@@ -86,7 +93,22 @@ def floor_and_ceiling(planes: list, points: np.ndarray, cfg: Settings
     return floor_z, ceil_z, observed, floor_pts, ceil_pts
 
 
-def _ceil_from_planes(planes: list, floor_z: float, cfg: Settings) -> float | None:
+def _floor_below(points: np.ndarray, cam_z: float, cfg: Settings) -> float | None:
+    z = points[:, 2]
+    zl = z[(z < cam_z - 0.9) & (z > cam_z - 2.2)]
+    if len(zl) < 200:
+        return None
+    hist, edges = np.histogram(zl, bins=np.arange(zl.min(), zl.max() + 0.02, 0.02))
+    if len(hist) == 0:
+        return None
+    # lowest strong peak: within 40 % of the strongest, take the lowest
+    strong = np.nonzero(hist >= 0.4 * hist.max())[0]
+    i = int(strong.min())
+    return float((edges[i] + edges[i + 1]) / 2)
+
+
+def _ceil_from_planes(planes: list, floor_z: float, cfg: Settings,
+                      cam_z: float | None = None) -> float | None:
     """Highest sizable horizontal plane at a plausible ceiling height, else None."""
     hor = [p for p in planes if p.kind == "horizontal"]
     if not hor:
@@ -94,7 +116,8 @@ def _ceil_from_planes(planes: list, floor_z: float, cfg: Settings) -> float | No
     biggest = max(len(p.points) for p in hor)
     cands = [p.z_median for p in hor
              if len(p.points) >= cfg.ceiling_plane_min_frac * biggest
-             and cfg.ceiling_min_m <= p.z_median - floor_z <= cfg.ceiling_max_m]
+             and cfg.ceiling_min_m <= p.z_median - floor_z <= cfg.ceiling_max_m
+             and (cam_z is None or p.z_median > cam_z + 0.2)]
     return max(cands) if cands else None
 
 

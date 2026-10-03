@@ -1,0 +1,467 @@
+[
+  {
+    "id": "c00a170fe1",
+    "video_s": 60.4,
+    "lidar_run": "benchmark/runs/lidar_ref/c00a170fe1",
+    "video_run": "benchmark/reports/xbench_v2/runs/c00a170fe1",
+    "registration": {
+      "keyframes": 120,
+      "registered": 27,
+      "rate": 0.225
+    },
+    "trajectory": {
+      "ate_rmse_cm": 9.58,
+      "ate_median_cm": 8.03,
+      "outlier_cameras": 2,
+      "extent_m": 2.58
+    },
+    "scale": {
+      "sim3_scale": 1.0249,
+      "error_pct": -2.43
+    },
+    "up_tilt_deg": 55.93,
+    "cloud": {
+      "accuracy_median_cm": 34.13,
+      "accuracy_p90_cm": 105.82,
+      "precision_pct": 7.8,
+      "completeness_pct": 3.4,
+      "tol_cm": 5.0
+    },
+    "measurements": {
+      "lidar": {
+        "n_rooms": 1,
+        "walls": [
+          2.2162,
+          0.3423,
+          3.3916,
+          0.1564,
+          0.2844,
+          0.9297,
+          2.5521,
+          2.096,
+          0.3526,
+          0.6972,
+          0.322,
+          2.984,
+          2.7674,
+          0.3709,
+          0.267,
+          0.7414,
+          0.296,
+          0.1941,
+          0.5615,
+          0.611,
+          0.5134,
+          0.8078,
+          0.1329,
+          0.6557,
+          0.9482,
+          0.2669,
+          2.0782,
+          0.4723,
+          1.4031,
+          1.4471
+        ],
+        "ceiling": 2.483,
+        "ceiling_observed": false,
+        "area": 24.343,
+        "n_openings": 1
+      },
+      "video": {
+        "n_rooms": 1,
+        "walls": [
+          2.2564,
+          1.1467,
+          1.4325,
+          0.2786,
+          0.824,
+          1.4253
+        ],
+        "ceiling": 2.482,
+        "ceiling_observed": false,
+        "area": 2.817,
+        "n_openings": 2
+      },
+      "wall_count_delta": -24,
+      "wall_mean_abs_cm": 4.96,
+      "wall_mean_rel_pct": 4.9,
+      "wall_within_3pct": 0.833,
+      "wall_ci_covers_lidar": 0.833,
+      "ceiling_abs_cm": 0.1,
+      "area_rel_pct": 88.4
+    }
+  },
+  {
+    "id": "1a8384c3f6",
+    "video_s": 60.9,
+    "lidar_run": "benchmark/runs/lidar_ref/1a8384c3f6",
+    "video_run": "benchmark/reports/xbench_v2/runs/1a8384c3f6",
+    "registration": {
+      "keyframes": 120,
+      "registered": 21,
+      "rate": 0.175
+    },
+    "trajectory": {
+      "ate_rmse_cm": 4.49,
+      "ate_median_cm": 4.76,
+      "outlier_cameras": 1,
+      "extent_m": 7.72
+    },
+    "scale": {
+      "sim3_scale": 0.9098,
+      "error_pct": 9.91
+    },
+    "up_tilt_deg": 102.81,
+    "cloud": {
+      "accuracy_median_cm": 10.66,
+      "accuracy_p90_cm": 43.67,
+      "precision_pct": 26.5,
+      "completeness_pct": 7.9,
+      "tol_cm": 5.0
+    },
+    "measurements": {
+      "lidar": {
+        "n_rooms": 4,
+        "walls": [
+          2.7893,
+          0.4982,
+          1.1489,
+          4.4246,
+          2.4874,
+          0.7833,
+          0.2539,
+          3.1744,
+          1.3522,
+          0.4082,
+          1.4854,
+          0.8149,
+          1.0736,
+          0.5554,
+          0.1209,
+          1.371,
+          0.2505,
+          0.3626,
+          1.2106,
+          0.3227,
+          0.4613,
+          0.3728,
+          0.3293,
+          3.0786,
+          1.7825,
+          0.8746,
+          0.2565,
+          0.6192,
+          0.2462,
+          1.7906,
+          0.7709,
+          2.0766,
+          0.4302,
+          0.335,
+          0.7008,
+          1.6115,
+          0.2853,
+          0.1254,
+          1.2341,
+          0.0831,
+          1.4591,
+          2.723,
+          1.0751,
+          0.2517,
+          1.197,
+          0.7325,
+          0.7064,
+          1.6965,
+          1.8778,
+          0.0134,
+          0.3987,
+          2.2426,
+          1.9161,
+          0.3232,
+          0.3603,
+          1.9327,
+          0.2672,
+          0.701,
+          1.2374,
+          1.4153,
+          0.4091,
+          0.4889,
+          0.2889,
+          0.3036,
+          1.6248,
+          1.5068
+        ],
+        "ceiling": 2.488,
+        "ceiling_observed": false,
+        "area": 52.30200000000001,
+        "n_openings": 0
+      },
+      "video": {
+        "n_rooms": 2,
+        "walls": [
+          2.1291,
+          1.0912,
+          2.2297,
+          0.7887,
+          0.6909,
+          1.6829,
+          0.5806,
+          0.7336,
+          0.5185,
+          0.8445,
+          1.9865,
+          0.441,
+          0.4482,
+          0.5451,
+          0.6798,
+          0.4105,
+          0.6155,
+          2.3828,
+          0.43,
+          1.1158,
+          1.02,
+          0.8637,
+          0.5602,
+          0.3925,
+          0.3506,
+          0.9063,
+          2.0045,
+          0.3346,
+          0.3562,
+          0.7121
+        ],
+        "ceiling": 2.384,
+        "ceiling_observed": true,
+        "area": 15.914000000000001,
+        "n_openings": 0
+      },
+      "wall_count_delta": -36,
+      "wall_mean_abs_cm": 3.17,
+      "wall_mean_rel_pct": 4.12,
+      "wall_within_3pct": 0.567,
+      "wall_ci_covers_lidar": 1.0,
+      "ceiling_abs_cm": 10.4,
+      "area_rel_pct": 69.6
+    }
+  },
+  {
+    "id": "c7d28f72c6",
+    "video_s": 1878.4,
+    "lidar_run": "benchmark/runs/lidar_ref/c7d28f72c6",
+    "video_run": "benchmark/reports/xbench_v2/runs/c7d28f72c6",
+    "registration": {
+      "keyframes": 120,
+      "registered": 6,
+      "rate": 0.05
+    },
+    "trajectory": {
+      "ate_rmse_cm": 108.39,
+      "ate_median_cm": 57.59,
+      "outlier_cameras": 0,
+      "extent_m": 6.67
+    },
+    "scale": {
+      "sim3_scale": 0.2485,
+      "error_pct": 302.4
+    },
+    "up_tilt_deg": 51.99,
+    "cloud": {
+      "accuracy_median_cm": 14.94,
+      "accuracy_p90_cm": 45.67,
+      "precision_pct": 12.3,
+      "completeness_pct": 0.1,
+      "tol_cm": 5.0
+    },
+    "measurements": {
+      "lidar": {
+        "n_rooms": 1,
+        "walls": [],
+        "ceiling": 2.298,
+        "ceiling_observed": true,
+        "area": 112.237,
+        "n_openings": 0
+      },
+      "video": {
+        "n_rooms": 1,
+        "walls": [
+          12.1072,
+          10.4374,
+          2.2999,
+          11.6979,
+          4.9981,
+          5.0983
+        ],
+        "ceiling": 2.502,
+        "ceiling_observed": false,
+        "area": 71.93,
+        "n_openings": 10
+      },
+      "wall_count_delta": 6,
+      "wall_mean_abs_cm": null,
+      "wall_mean_rel_pct": null,
+      "wall_within_3pct": null,
+      "wall_ci_covers_lidar": null,
+      "ceiling_abs_cm": 20.4,
+      "area_rel_pct": 35.9
+    }
+  },
+  {
+    "id": "benchmark_1",
+    "video_s": 1076.2,
+    "lidar_run": "benchmark/runs/lidar_ref/benchmark_1",
+    "video_run": "benchmark/reports/xbench_v2/runs/benchmark_1",
+    "registration": {
+      "keyframes": 120,
+      "registered": 120,
+      "rate": 1.0
+    },
+    "trajectory": {
+      "ate_rmse_cm": 1.96,
+      "ate_median_cm": 1.55,
+      "outlier_cameras": 0,
+      "extent_m": 4.46
+    },
+    "scale": {
+      "sim3_scale": 1.0729,
+      "error_pct": -6.79
+    },
+    "up_tilt_deg": 1.53,
+    "cloud": {
+      "accuracy_median_cm": 5.77,
+      "accuracy_p90_cm": 18.89,
+      "precision_pct": 45.7,
+      "completeness_pct": 71.8,
+      "tol_cm": 5.0
+    },
+    "measurements": {
+      "lidar": {
+        "n_rooms": 1,
+        "walls": [
+          3.5892,
+          0.5711,
+          0.4015,
+          0.6652,
+          0.5234,
+          1.1445,
+          2.0499,
+          1.2896,
+          0.3846,
+          0.3773,
+          0.2651,
+          0.5564,
+          0.4864,
+          0.6362,
+          5.428,
+          2.9513
+        ],
+        "ceiling": 2.82,
+        "ceiling_observed": true,
+        "area": 17.079,
+        "n_openings": 1
+      },
+      "video": {
+        "n_rooms": 1,
+        "walls": [
+          2.0244,
+          0.3392,
+          0.6666,
+          3.4866,
+          0.6431,
+          0.3723,
+          0.3773,
+          0.4769,
+          1.0049,
+          1.9128,
+          1.4725,
+          0.5723,
+          0.7026,
+          0.4895,
+          0.5006,
+          4.8476
+        ],
+        "ceiling": 2.973,
+        "ceiling_observed": true,
+        "area": 14.439,
+        "n_openings": 1
+      },
+      "wall_count_delta": 0,
+      "wall_mean_abs_cm": 15.08,
+      "wall_mean_rel_pct": 9.94,
+      "wall_within_3pct": 0.438,
+      "wall_ci_covers_lidar": 0.75,
+      "ceiling_abs_cm": 15.3,
+      "area_rel_pct": 15.5
+    }
+  },
+  {
+    "id": "benchmark_2",
+    "video_s": 960.4,
+    "lidar_run": "benchmark/runs/lidar_ref/benchmark_2",
+    "video_run": "benchmark/reports/xbench_v2/runs/benchmark_2",
+    "registration": {
+      "keyframes": 87,
+      "registered": 87,
+      "rate": 1.0
+    },
+    "trajectory": {
+      "ate_rmse_cm": 1.66,
+      "ate_median_cm": 1.2,
+      "outlier_cameras": 0,
+      "extent_m": 1.71
+    },
+    "scale": {
+      "sim3_scale": 0.9606,
+      "error_pct": 4.1
+    },
+    "up_tilt_deg": 0.63,
+    "cloud": {
+      "accuracy_median_cm": 5.3,
+      "accuracy_p90_cm": 20.75,
+      "precision_pct": 48.5,
+      "completeness_pct": 68.5,
+      "tol_cm": 5.0
+    },
+    "measurements": {
+      "lidar": {
+        "n_rooms": 1,
+        "walls": [
+          2.5442,
+          0.6035,
+          0.8854,
+          1.9042,
+          0.5762,
+          0.3839,
+          2.8535,
+          2.8916
+        ],
+        "ceiling": 2.852,
+        "ceiling_observed": true,
+        "area": 9.161,
+        "n_openings": 0
+      },
+      "video": {
+        "n_rooms": 1,
+        "walls": [
+          0.5798,
+          0.8378,
+          1.9052,
+          0.41,
+          0.4929,
+          3.0411,
+          2.9779,
+          2.6133
+        ],
+        "ceiling": 2.486,
+        "ceiling_observed": false,
+        "area": 9.589,
+        "n_openings": 0
+      },
+      "wall_count_delta": 0,
+      "wall_mean_abs_cm": 6.56,
+      "wall_mean_rel_pct": 5.36,
+      "wall_within_3pct": 0.25,
+      "wall_ci_covers_lidar": 1.0,
+      "ceiling_abs_cm": 36.6,
+      "area_rel_pct": 4.7
+    }
+  }
+]

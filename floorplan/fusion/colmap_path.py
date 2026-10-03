@@ -50,6 +50,7 @@ class ColmapResult:
     K: np.ndarray | None = None
     size: tuple[int, int] | None = None
     up_hint: np.ndarray | None = None   # world up from the camera orientations
+    model_sizes: list[int] = field(default_factory=list)  # registered images per sub-model
 
     @property
     def centres(self) -> np.ndarray:
@@ -220,16 +221,38 @@ def reconstruct(photos: PhotoSet, cfg: Settings, workdir: Path,
         shutil.copy(src, imgs / f"{i:06d}{src.suffix.lower()}")
 
     db = workdir / "database.db"
+    if db.exists():
+        db.unlink()
     n = photos.n_images
+    aliked = cfg.sfm_features == "aliked"
     fe = ["colmap", "feature_extractor", "--database_path", str(db), "--image_path", str(imgs),
-          "--ImageReader.single_camera", "1", "--SiftExtraction.max_num_features", "8192",
+          "--ImageReader.single_camera", "1",
+          "--FeatureExtraction.num_threads", str(cfg.threads),
           *_cpu_flag("feature_extractor", "FeatureExtraction.use_gpu", "SiftExtraction.use_gpu")]
+    if aliked:
+        fe += ["--FeatureExtraction.type", "ALIKED_N16ROT",
+               "--AlikedExtraction.max_num_features", str(cfg.sfm_max_features)]
+    else:
+        fe += ["--SiftExtraction.max_num_features", "4096",
+               "--SiftExtraction.peak_threshold", str(cfg.sfm_sift_peak)]
+    if cfg.sfm_max_image_size:
+        fe += ["--FeatureExtraction.max_image_size", str(cfg.sfm_max_image_size)]
+    # Focal prior for frames without EXIF (all video keyframes). COLMAP's default
+    # (1.2 x the long side) is a telephoto guess; a phone main camera is ~0.7-0.85,
+    # and a bad initial focal is a common reason incremental mapping fragments.
+    if cfg.sfm_focal_factor and not photos.f_px:
+        fe += ["--ImageReader.default_focal_length_factor", str(cfg.sfm_focal_factor)]
     if _run(fe, verbose).returncode != 0:
         raise RuntimeError("COLMAP feature extraction failed")
 
-    matcher = (["colmap", "sequential_matcher", "--database_path", str(db)]
-               if n > cfg.colmap_exhaustive_max
+    sequential = n > cfg.colmap_exhaustive_max
+    matcher = (["colmap", "sequential_matcher", "--database_path", str(db),
+                "--SequentialMatching.overlap", str(cfg.sfm_seq_overlap)]
+               if sequential
                else ["colmap", "exhaustive_matcher", "--database_path", str(db)])
+    matcher += ["--FeatureMatching.num_threads", str(cfg.threads)]
+    if aliked:
+        matcher += ["--FeatureMatching.type", "ALIKED_LIGHTGLUE"]
     matcher += _cpu_flag("exhaustive_matcher", "FeatureMatching.use_gpu", "SiftMatching.use_gpu")
     if _run(matcher, verbose).returncode != 0:
         raise RuntimeError("COLMAP feature matching failed")
@@ -238,21 +261,32 @@ def reconstruct(photos: PhotoSet, cfg: Settings, workdir: Path,
     if sparse.exists():
         shutil.rmtree(sparse)
     sparse.mkdir()
-    _run(["colmap", "mapper", "--database_path", str(db), "--image_path", str(imgs),
-          "--output_path", str(sparse)], verbose)
+    # the global mapper needs a well-connected view graph; a handful of stills
+    # (photos tier) initialise more reliably incrementally
+    if cfg.sfm_mapper == "global" and n >= cfg.sfm_global_min_images:
+        _run(["colmap", "global_mapper", "--database_path", str(db), "--image_path", str(imgs),
+              "--output_path", str(sparse), "--GlobalMapper.random_seed", "0",
+              "--GlobalMapper.gp_use_gpu", "0", "--GlobalMapper.ba_ceres_use_gpu", "0",
+              "--GlobalMapper.num_threads", str(cfg.threads)], verbose)
+    else:
+        _run(["colmap", "mapper", "--database_path", str(db), "--image_path", str(imgs),
+              "--output_path", str(sparse), "--Mapper.num_threads", str(cfg.threads),
+              "--Mapper.init_min_tri_angle", str(cfg.sfm_init_min_tri_angle)], verbose)
 
-    models = sorted([d for d in sparse.iterdir() if d.is_dir()])
+    models = sorted([d for d in sparse.iterdir() if d.is_dir() and not d.name.endswith("_txt")])
     if not models:
         raise RuntimeError(
             f"COLMAP could not register images (0 models from {n} images). "
             "The photos likely lack overlap; retry with more/overlapping images.")
 
-    # COLMAP often emits several disjoint sub-models; keep the largest one.
-    best = None
-    for m in models:
-        cand = (*_parse_txt_model(m, verbose=False), m)
-        if best is None or len(cand[0]) > len(best[0]):
-            best = cand
+    # COLMAP can emit several disjoint sub-models. Keep the one that registered
+    # the most images, and record what was dropped so it is never silent.
+    parsed = [(*_parse_txt_model(m, verbose=False), m) for m in models]
+    parsed.sort(key=lambda c: (-len(c[2]), -len(c[0])))
+    best = parsed[0]
+    model_sizes = [len(c[2]) for c in parsed]
+    if verbose:
+        print(f"[sfm] {len(models)} model(s), registered images per model: {model_sizes} of {n}")
     pts, errs, images, K, size, model_dir = best
     if len(pts) == 0:
         raise RuntimeError("COLMAP produced an empty sparse model")
@@ -291,4 +325,5 @@ def reconstruct(photos: PhotoSet, cfg: Settings, workdir: Path,
 
     return ColmapResult(points=pts, conf=conf, n_images=n, n_registered=len(images),
                         n_points=len(pts), dense=kind, model_dir=model_dir,
-                        images=images, K=K, size=size, up_hint=up_hint)
+                        images=images, K=K, size=size, up_hint=up_hint,
+                        model_sizes=model_sizes)

@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from floorplan import bench, pipeline
+from floorplan import bench, pipeline, xbench
 from floorplan.config import Settings
 
 
@@ -88,6 +88,20 @@ def main(argv: list[str] | None = None) -> int:
                    help="also run each capture with drift correction OFF and report the delta")
     b.add_argument("--quiet", action="store_true")
 
+    x = sub.add_parser("xbench", help="score the video tier against the LiDAR tier of the same Record3D clips")
+    x.add_argument("--manifest", required=True, help="manifest listing Record3D exports")
+    x.add_argument("--out", required=True, help="report directory (xbench.json, xbench.md, runs/)")
+    x.add_argument("--lidar-runs", default=None, help="cache of LiDAR reference runs")
+    x.add_argument("--force", action="store_true", help="re-run the video tier")
+    x.add_argument("--force-lidar", action="store_true", help="re-run the LiDAR reference")
+    x.add_argument("--only", nargs="*", default=None, help="capture ids to run")
+    x.add_argument("--tier", default="video", choices=["video", "photos"],
+                   help="tier scored against LiDAR: the clip itself, or 8 stills sampled from it")
+    x.add_argument("--keyframes", default=None, choices=["sharp", "uniform"])
+    x.add_argument("--max-keyframes", type=int, default=None)
+    _add_recon_flags(x)
+    x.add_argument("--quiet", action="store_true")
+
     args = ap.parse_args(argv)
 
     if args.cmd == "run":
@@ -111,6 +125,15 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:
             print(f"error: {type(exc).__name__}: {exc}", file=sys.stderr)
             return 1
+    if args.cmd == "xbench":
+        cfg = _settings_from_args(args)
+        if args.keyframes:
+            cfg.video_keyframes = args.keyframes
+        if args.max_keyframes is not None:
+            cfg.video_max_frames = args.max_keyframes
+        xbench.run(args.manifest, args.out, cfg=cfg, lidar_runs=args.lidar_runs,
+                   force=args.force, force_lidar=args.force_lidar, only=args.only,
+                   verbose=not args.quiet, tier=args.tier)
     return 0
 
 

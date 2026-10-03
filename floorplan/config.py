@@ -57,6 +57,18 @@ class Settings:
     outline_simplify_m: float = 0.25   # collar tolerance when simplifying the footprint hull
     outline_max_rect_ratio: float = 1.35  # reject a rectangle that over-covers the observed floor by more
 
+    # ── free-space layout (geometry/layout.py) ───────────────────────────────
+    layout: bool = True               # rooms from free space; else the plane-network path
+    layout_cell: float = 0.02         # grid cell (m)
+    layout_min_pts: int = 2           # band points for a cell to count as wall
+    layout_open_m: float = 0.3        # opening radius: cuts leaks narrower than 2x this
+    layout_door_close_m: float = 1.2  # wall gaps up to this wide (doors) are sealed along the wall
+    layout_seal_min_run_m: float = 0.6  # ...when both sides are wall runs at least this long
+    layout_smooth_m: float = 0.06     # close/open radius removing grid noise
+    layout_min_edge: float = 0.25     # drop wall jogs shorter than this
+    layout_refine_m: float = 0.15     # search band when snapping an edge to its wall points
+    layout_multi_room: bool = True    # every camera-visited free-space component is a room
+
     # ── drift correction ─────────────────────────────────────────────────────
     drift_correction: bool = True
     auto_up: bool = True               # rotate cloud so estimated gravity = +Z
@@ -75,6 +87,11 @@ class Settings:
     ci_floor_length_m: float = 0.010
     ci_floor_height_m: float = 0.005
     ci_floor_area_rel: float = 0.010
+    # systematic wall-length error per tier (95% half-width, metres): plane fit and
+    # corner placement on that tier's cloud. Set from the xbench residuals.
+    ci_sys_length_lidar: float = 0.02
+    ci_sys_length_video: float = 0.10
+    ci_sys_length_photos: float = 0.20
 
     # ── photo / video tiers ──────────────────────────────────────────────────
     engine: str = "auto"             # auto | monodepth | colmap
@@ -83,12 +100,39 @@ class Settings:
     # indoor metric variant returns metres directly, so no anchor is needed.
     metric_model_id: str = "depth-anything/Depth-Anything-V2-Metric-Indoor-Small-hf"
     metric_max_points: int = 4_000_000   # cap on the fused metric cloud
+    # raw: stack each frame's depth as predicted (original). aligned: fit every
+    # frame's depth to the SfM keypoints, filter, and fuse (sfm_depth.py).
+    depth_fusion: str = "aligned"
+    depth_upright: bool = True        # rotate frames so gravity points down before inference
+    depth_consistency_tol: float = 0.04  # relative depth agreement with neighbour views
+    depth_consistency_min: int = 1    # neighbour views that must agree
+    # Depth-Anything-V2-Metric-Indoor scale calibration (scripts/depth_probe.py vs
+    # LiDAR): bias ~ fc / (f / upright height) on 4:3 frames; fc 1.074-1.083 on two
+    # camera configurations. Other framings are not calibrated: wide interval.
+    depth_focal_canonical: float | None = 1.08
+    depth_scale_sys_rel: float = 0.03       # 95% systematic scale error, calibrated framing
+    depth_scale_sys_rel_uncal: float = 0.20 # 95% systematic scale error, other framings
+    depth_store_dim: int = 640        # long side of each stored depth map (memory bound)
+    depth_edge_tol: float = 0.06      # drop pixels whose depth jumps more than this per px (relative)
     scale_ref_m: float | None = None  # known real-world length for scale anchoring
     scale_ref_kind: str = "door_width"
     default_ceiling_m: float = 2.5    # fallback when the ceiling was never observed
     min_photos_for_colmap: int = 12   # below this, monocular depth is used
-    video_fps: float = 2.0            # keyframe rate for the video tier
-    colmap_exhaustive_max: int = 150  # exhaustive matching below this many images
+    video_fps: float = 4.0            # keyframe rate for the video tier (overlap for SfM)
+    video_keyframes: str = "sharp"    # sharp (sharpest per window) | uniform
+    video_max_frames: int = 120       # keyframe cap; long walks get a lower effective rate
+    video_max_dim: int = 1280         # keyframe long side (memory/CPU bound on 8 GB laptops)
+    threads: int = 4                  # CPU threads for COLMAP / torch (keep the laptop usable)
+    colmap_exhaustive_max: int = 60   # exhaustive matching below this many images
+    sfm_features: str = "sift"        # sift | aliked (ALIKED + LightGlue, COLMAP >= 3.13)
+    sfm_sift_peak: float = 0.002      # SIFT contrast threshold (COLMAP 0.0067): more keypoints on plain walls
+    sfm_max_features: int = 4096      # ALIKED keypoints per image
+    sfm_mapper: str = "global"        # incremental | global (GLOMAP, COLMAP >= 3.13)
+    sfm_focal_factor: float | None = 0.8  # initial focal / long side for EXIF-less frames
+    sfm_max_image_size: int | None = None  # downscale for feature extraction
+    sfm_seq_overlap: int = 20         # sequential matcher: neighbours per image
+    sfm_global_min_images: int = 30   # below this, incremental mapping
+    sfm_init_min_tri_angle: float = 8.0   # handheld clips have little parallax (COLMAP default 16)
     colmap_dense: bool = True         # attempt dense MVS (needs CUDA); else sparse
     mvs_enable: bool = True           # CPU plane-sweep densification from SfM poses
     mvs_max_dim: int = 192            # working resolution (longest image side)
