@@ -63,6 +63,69 @@ is what makes them comparable and keeps `results.json` identical in shape.
     --scale-ref 2.42 --scale-ref-kind ceiling_height
 ```
 
+## Photos / video tier — exact commands (CPU or Apple Silicon, no NVIDIA)
+
+`ffmpeg` (video frames) and `colmap` (SfM) are required; the learned
+metric-depth backend is optional and only makes the tier metric without any
+external reference:
+
+```bash
+brew install ffmpeg colmap libusb            # tools (libusb is for open3d)
+uv venv --python 3.11 .venv && uv pip install -e .
+scripts/fetch_weights.sh                     # optional: torch + transformers (MPS on Apple Silicon)
+```
+
+Run one capture (tier is auto-detected; `--fps` = video keyframes/second):
+
+```bash
+# video walkthrough
+./.venv/bin/floorplan run benchmark/captures/room_rgb.mp4                  --out benchmark/runs/video_room
+./.venv/bin/floorplan run benchmark/captures/2026-10-03--00-39-56/rgb.mp4  --out benchmark/runs/video
+
+# photo folder
+./.venv/bin/floorplan run benchmark/captures/photos_2026-10-03--00-39-56   --out benchmark/runs/photos
+
+# LiDAR (Record3D export: folder or .zip containing odometry.csv)
+./.venv/bin/floorplan run benchmark/captures/2026-10-03--00-39-56          --out benchmark/runs/lidar
+```
+
+Key options:
+
+```bash
+--device auto|mps|cpu|cuda   # monocular-depth device (auto: cuda > mps > cpu)
+--engine auto|monodepth|colmap
+                             #  auto (default): learned metric depth, else CPU COLMAP
+                             #  colmap: pure-CPU SfM (+ CPU plane-sweep MVS), no torch
+                             #  monodepth: force the learned metric-depth model
+--fps 2                      # video keyframe rate
+--scale-ref 2.42 --scale-ref-kind ceiling_height   # anchor a reference-free set
+--reference-capture <record3d.zip>                 # paired metric capture of the same room
+```
+
+On a machine **without `torch`**, `--engine auto` transparently falls back to the
+CPU COLMAP path — the tier still runs, no GPU required.
+
+Score / compare:
+
+```bash
+./.venv/bin/floorplan bench --manifest benchmark/manifest.video.json  --out benchmark/reports/video
+./.venv/bin/floorplan bench --manifest benchmark/manifest.photos.json --out benchmark/reports/photos
+./.venv/bin/floorplan bench --manifest benchmark/manifest.json       --out benchmark --force   # LiDAR
+```
+
+What a successful run prints, and where to look:
+
+```bash
+# stderr, e.g.:
+#   [ingest] video: 126 images from room_rgb
+#   [metric] depth-anything/Depth-Anything-V2-Metric-Indoor-Small-hf on mps
+#   [arbiter] chose metric_depth:sfm_fused
+#   [geometry] planes=.. walls=.. rooms=1 openings=.. footprint=.. m2 ceiling=.. m observed=True
+
+grep path_chosen benchmark/runs/video_room/provenance.json          # which code path won
+python -c "import json;print(json.load(open('benchmark/runs/video_room/results.json'))['scale'])"
+```
+
 ## Metric scale (photos / video)
 
 A photo/video reconstruction is metric only up to an unknown scale. It is
