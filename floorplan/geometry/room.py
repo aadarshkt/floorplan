@@ -232,7 +232,21 @@ def ceiling_height(floor_z: float, ceil_z: float, observed: bool,
     return Measurement(round(height, 3), confidence.interval(height, ci, cfg.ci_floor_height_m), method)
 
 
-def property_area(floor_pts: np.ndarray, cfg: Settings) -> Measurement:
+def property_area(floor_pts: np.ndarray, cfg: Settings,
+                  rooms: list[Room] | None = None) -> Measurement:
+    """Footprint = sum of the room polygons (from the lidar-optimized branch).
+
+    A convex hull of floor points fills L-corners and counts floor seen through
+    doorways (e.g. 33.9 m2 for a 16.5 m2 room). Falls back to the hull only when
+    no room polygon exists.
+    """
+    polys = [np.asarray(r.polygon) for r in (rooms or []) if len(r.polygon) >= 3]
+    if polys:
+        value = float(sum(shoelace(p) for p in polys))
+        err = float(sum(max(r.floor_area_m2.value - r.floor_area_m2.ci95[0],
+                            r.floor_area_m2.ci95[1] - r.floor_area_m2.value) for r in rooms))
+        return Measurement(round(value, 3), [round(max(0.0, value - err), 4),
+                                             round(value + err, 4)], "sum_of_room_polygons")
     from scipy.spatial import ConvexHull
     if len(floor_pts) < 10:
         return Measurement(0.0, [0.0, 0.0], "none")
@@ -243,7 +257,7 @@ def property_area(floor_pts: np.ndarray, cfg: Settings) -> Measurement:
     ci = confidence.bootstrap_hull_area(floor_pts[:, :2], cfg) or [value * 0.97, value * 1.03]
     return Measurement(round(value, 3),
                        confidence.interval(value, ci, cfg.ci_floor_area_rel * value),
-                       "bootstrap_hull")
+                       "convex_hull_fallback")
 
 
 def _rdp(points: np.ndarray, tol: float) -> np.ndarray:

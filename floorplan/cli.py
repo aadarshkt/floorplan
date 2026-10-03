@@ -33,6 +33,8 @@ def _settings_from_args(a: argparse.Namespace) -> Settings:
         cfg.video_fps = a.fps
     if getattr(a, "no_drift_correction", False):
         cfg.drift_correction = False
+    if getattr(a, "fusion", None):
+        cfg.lidar_fusion = a.fusion
     return cfg
 
 
@@ -49,7 +51,9 @@ def _add_recon_flags(p: argparse.ArgumentParser) -> None:
     p.add_argument("--reference-capture", default=None,
                    help="paired Record3D capture of the same room (metric scale/geometry)")
     p.add_argument("--fps", type=float, default=None,
-                   help="keyframe rate for the video tier (default 2)")
+                   help="keyframe rate for the video tier (default 4)")
+    p.add_argument("--fusion", default=None, choices=["points", "tsdf"],
+                   help="LiDAR fusion: points (default) or tsdf (also writes scan_mesh.ply)")
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -35,7 +35,10 @@ def _ransac_plane(pts: np.ndarray, dist: float, iters: int,
         sample = pts
     m = len(sample)
     best_cnt, best = -1, None
-    for _ in range(iters):
+    budget = iters
+    for it in range(iters):
+        if it >= budget:
+            break
         tri = rng.choice(m, 3, replace=False)
         p0, p1, p2 = sample[tri]
         nrm = np.cross(p1 - p0, p2 - p0)
@@ -47,6 +50,11 @@ def _ransac_plane(pts: np.ndarray, dist: float, iters: int,
         cnt = int(np.count_nonzero(np.abs(sample @ nrm + d) < dist))
         if cnt > best_cnt:
             best_cnt, best = cnt, np.concatenate([nrm, [d]])
+            # stop once the inlier share gives 99.9 % confidence of a clean sample
+            # (adaptive RANSAC, from the lidar-optimized branch); deterministic
+            w3 = min((cnt / m) ** 3, 1.0 - 1e-12)
+            if w3 > 0:
+                budget = min(budget, max(64, int(np.ceil(np.log(0.001) / np.log1p(-w3)))))
     return best
 
 

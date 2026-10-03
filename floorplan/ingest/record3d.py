@@ -18,6 +18,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import warnings
 import math
 import shutil
 import subprocess
@@ -48,6 +49,8 @@ class Record3DCapture:
     rgb_size: tuple[int, int] | None      # (w, h)
     depth_size: tuple[int, int] | None    # (w, h)
     pose_convention: str | None = None    # known convention (.r3d: c2w_gl); None = auto-detect
+    pose_selection: dict = field(default_factory=dict)  # how the convention was chosen (provenance)
+    frame_ids: np.ndarray | None = None   # odometry frame number per entry (= rgb frame index)
 
     @property
     def n_frames(self) -> int:
@@ -95,32 +98,44 @@ def _read_camera_matrix(path: Path) -> np.ndarray:
 
 
 def _read_odometry(path: Path) -> tuple[np.ndarray, ...]:
-    """Parse odometry.csv, tolerating whitespace-padded headers/values."""
-    ts, pos, quat, intr = [], [], [], []
+    """Parse odometry.csv into (frame_ids, ts, pos, quat, intr), validated per row.
+
+    Rows are keyed by their ``frame`` column (not file order), quaternions are
+    normalised, and a row with non-finite values, a zero quaternion, a
+    non-positive focal length or a duplicate frame is skipped with a warning
+    (row validation adapted from the lidar-optimized branch).
+    """
+    rows, seen = [], set()
     with open(path, newline="") as f:
         reader = csv.reader(f)
         header = [h.strip() for h in next(reader)]
         col = {name: i for i, name in enumerate(header)}
-
-        def cell(row: list[str], name: str) -> float:
-            return float(row[col[name]].strip())
-
-        for row in reader:
+        keys = ("timestamp", "x", "y", "z", "qx", "qy", "qz", "qw", "fx", "fy", "cx", "cy")
+        for line, row in enumerate(reader, 2):
             if not row or not row[0].strip():
                 continue
             try:
-                ts.append(cell(row, "timestamp"))
-                pos.append([cell(row, "x"), cell(row, "y"), cell(row, "z")])
-                quat.append([cell(row, "qx"), cell(row, "qy"), cell(row, "qz"), cell(row, "qw")])
-                intr.append([cell(row, "fx"), cell(row, "fy"), cell(row, "cx"), cell(row, "cy")])
-            except (KeyError, ValueError, TypeError, IndexError):
+                vals = [float(row[col[k]].strip()) for k in keys]
+                frame = int(row[col["frame"]].strip()) if "frame" in col else len(rows)
+                qn = float(np.linalg.norm(vals[4:8]))
+                if not np.all(np.isfinite(vals)) or qn < 1e-8:
+                    raise ValueError("non-finite value or zero quaternion")
+                if min(vals[8:10]) <= 0:
+                    raise ValueError("non-positive focal length")
+                if frame in seen:
+                    raise ValueError(f"duplicate frame {frame}")
+            except (KeyError, ValueError, TypeError, IndexError) as exc:
+                warnings.warn(f"{path.name}: skipping row {line}: {exc}")
                 continue
-    return (
-        np.asarray(ts),
-        np.asarray(pos, dtype=np.float64),
-        np.asarray(quat, dtype=np.float64),
-        np.asarray(intr, dtype=np.float64),
-    )
+            vals[4:8] = list(np.asarray(vals[4:8]) / qn)
+            rows.append((frame, vals))
+            seen.add(frame)
+    if not rows:
+        raise ValueError(f"no valid poses in {path}")
+    rows.sort(key=lambda r: r[0])
+    ids = np.array([r[0] for r in rows], dtype=np.int64)
+    a = np.array([r[1] for r in rows], dtype=np.float64)
+    return ids, a[:, 0], a[:, 1:4], a[:, 4:8], a[:, 8:12]
 
 
 def _probe_video_size(path: Path | None) -> tuple[int, int] | None:
@@ -177,16 +192,26 @@ def load(path: str | Path) -> Record3DCapture:
 
     rgb_path = next((root / n for n in ("rgb.mp4", "rgb.mov") if (root / n).exists()), None)
     K = _read_camera_matrix(root / "camera_matrix.csv")
-    ts, pos, quat, intr = _read_odometry(root / "odometry.csv")
+    ids, ts, pos, quat, intr = _read_odometry(root / "odometry.csv")
 
-    # Align frame counts (odometry rows vs depth images).
-    n = len(depth_paths)
-    if len(pos) < n:
-        depth_paths = depth_paths[: len(pos)]
-        conf_paths = conf_paths[: len(pos)]
-        n = len(pos)
-    elif len(pos) > n:
-        pos, quat, intr, ts = pos[:n], quat[:n], intr[:n], ts[:n]
+    # Pair poses with depth/confidence images by frame number, not by position:
+    # a skipped odometry row must not shift every later depth onto the wrong pose.
+    def by_frame(paths):
+        out = {}
+        for q in paths:
+            if q.stem.isdigit():
+                out[int(q.stem)] = q
+        return out
+    dmap, cmap = by_frame(depth_paths), by_frame(conf_paths)
+    keep = [k for k, f in enumerate(ids) if int(f) in dmap]
+    if not keep:
+        raise ValueError("no depth image matches an odometry frame number")
+    ids, ts, pos, quat, intr = ids[keep], ts[keep], pos[keep], quat[keep], intr[keep]
+    depth_paths = [dmap[int(f)] for f in ids]
+    conf_paths = ([cmap[int(f)] for f in ids] if cmap and all(int(f) in cmap for f in ids)
+                  else [])
+    if cmap and not conf_paths:
+        warnings.warn("some frames have no confidence map: confidence filtering disabled")
 
     depth_size = _image_size(depth_paths[0]) if depth_paths else None
     src_meta = root / "source.json"          # written by ingest.r3d (no rgb.mp4 needed)
@@ -209,14 +234,14 @@ def load(path: str | Path) -> Record3DCapture:
         rgb_size=rgb_size,
         depth_size=depth_size,
         pose_convention=pose_convention,
+        frame_ids=ids,
     )
 
 
 def depth_intrinsics(capture: Record3DCapture) -> np.ndarray:
-    """Per-frame intrinsics rescaled from RGB resolution to the depth resolution."""
+    """Per-frame intrinsics rescaled from RGB to depth resolution (x and y separately)."""
     if capture.depth_size is None or capture.rgb_size is None:
         return capture.intr.copy()
-    dw, _dh = capture.depth_size
-    rw, _rh = capture.rgb_size
-    s = dw / rw
-    return capture.intr * s
+    dw, dh = capture.depth_size
+    rw, rh = capture.rgb_size
+    return capture.intr * np.array([dw / rw, dh / rh, dw / rw, dh / rh])

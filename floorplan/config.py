@@ -21,6 +21,11 @@ class Settings:
     voxel_size: float = 0.01     # voxel downsample size (metres)
     stat_nb_neighbors: int = 20  # statistical outlier removal
     stat_std_ratio: float = 2.0
+    depth_edge_rel: float = 0.08 # drop pixels at depth discontinuities (flying points)
+    lidar_fusion: str = "points" # points | tsdf (tsdf also writes scan_mesh.ply)
+    tsdf_voxel_m: float = 0.02
+    tsdf_trunc_m: float = 0.06
+    tsdf_max_blocks: int = 20000 # ~625 MB cap
 
     # ── plane extraction ─────────────────────────────────────────────────────
     ransac_dist: float = 0.02
@@ -70,7 +75,7 @@ class Settings:
     layout_multi_room: bool = True    # every camera-visited free-space component is a room
 
     # ── drift correction ─────────────────────────────────────────────────────
-    drift_correction: bool = True
+    drift_correction: bool = False     # old proximity loop-blend: no verified constraint, off
     auto_up: bool = True               # rotate cloud so estimated gravity = +Z
 
     # ── openings ─────────────────────────────────────────────────────────────

@@ -58,7 +58,9 @@ def _run_lidar(capture_path: str | Path, out: Path, cfg: Settings, verbose: bool
     cap = record3d.load(capture_path)
     timings["ingest"] = time.time() - t0
 
-    drift_info = dict(_NO_DRIFT)
+    # The old position-proximity "loop closure" nudged poses by <= 5 cm without
+    # any verified constraint; it is off by default and reported honestly.
+    drift_info = {**_NO_DRIFT, "method": "none (ARKit VIO poses, no verified loop constraint)"}
     if cfg.drift_correction:
         loops = drift_mod.detect_loops(cap.pos)
         if loops:
@@ -70,14 +72,18 @@ def _run_lidar(capture_path: str | Path, out: Path, cfg: Settings, verbose: bool
 
     t0 = time.time()
     convention = depth_fusion.detect_pose_convention(cap, cfg)
-    pcd = depth_fusion.fuse(cap, cfg, verbose=verbose, convention=convention)
+    mesh_path = out / "scan_mesh.ply" if cfg.lidar_fusion == "tsdf" else None
+    pcd = depth_fusion.fuse(cap, cfg, verbose=verbose, convention=convention, mesh_path=mesh_path)
     timings["fusion"] = time.time() - t0
     pts = np.asarray(pcd.points)
 
     recon = Reconstruction(points=pts, tier="lidar",
-                           path_chosen=f"depth_fusion:{convention}",
-                           scale_reference=NATIVE_METRIC)
-    cams = (np.arange(cap.n_frames), depth_fusion.camera_centres(cap, convention))
+                           path_chosen=f"depth_fusion:{cfg.lidar_fusion}:{convention}",
+                           scale_reference=NATIVE_METRIC,
+                           notes={"pose_selection": cap.pose_selection,
+                                  "mesh": "scan_mesh.ply" if mesh_path else None})
+    frames = cap.frame_ids if cap.frame_ids is not None else np.arange(cap.n_frames)
+    cams = (frames, depth_fusion.camera_centres(cap, convention))
     return _geometry_and_export(pts, cap.capture_id, "lidar", out, cfg, verbose,
                                 timings, drift_info, recon, capture_path, cameras=cams)
 
@@ -320,7 +326,7 @@ def _geometry_and_export(pts: np.ndarray, capture_id: str, tier: str, out: Path,
         if ci is not None:
             wall_ci[w.id] = ci
     adjacency = multiroom.adjacency(rooms) if len(rooms) > 1 else []
-    prop = room_mod.property_area(floor_pts, cfg)
+    prop = room_mod.property_area(floor_pts, cfg, rooms=rooms)
     timings["confidence"] = time.time() - t0
 
     if verbose:
@@ -344,6 +350,8 @@ def _geometry_and_export(pts: np.ndarray, capture_id: str, tier: str, out: Path,
             prop.value, json_export.widen(prop.value, prop.ci95, 2 * scale_rel), prop.method),
         adjacency=adjacency, drift=drift_info, scale=scale_payload, scale_rel=scale_rel,
     )
+    if recon.notes.get("mesh"):
+        payload["artifacts"]["mesh"] = recon.notes["mesh"]
     json_export.dump(payload, out / "results.json")
     label = {"lidar": "LiDAR", "photos": "Photos", "video": "Video"}.get(tier, tier)
     svg.render(rooms, out / "floor_plan.svg",
@@ -356,7 +364,8 @@ def _geometry_and_export(pts: np.ndarray, capture_id: str, tier: str, out: Path,
                             extra={"scale_reference": recon.scale_reference,
                                    "scale_factor": round(float(recon.scale_factor), 4),
                                    "arbiter": recon.notes.get("arbiter", []),
-                                   "reference_capture": cfg.reference_capture})
+                                   "reference_capture": cfg.reference_capture,
+                                   "pose_selection": recon.notes.get("pose_selection")})
     if verbose:
         print(f"[done] {out}  (total {prov['total_s']}s)")
     return payload

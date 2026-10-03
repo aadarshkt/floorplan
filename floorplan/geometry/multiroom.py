@@ -142,12 +142,57 @@ def extract_rooms(walls: list[Wall], floor_z: float, ceil_z: float, observed: bo
     return rooms
 
 
-def adjacency(rooms: list[room_mod.Room]) -> list[dict]:
+def adjacency(rooms: list[room_mod.Room], wall_gap: float = 0.35,
+              min_overlap: float = 0.3) -> list[dict]:
+    """Which rooms connect, and how.
+
+    Rooms from the free-space layout are separate polygons, so connection is
+    geometric: a door on a wall of room A whose midpoint lies within a wall's
+    thickness of room B's boundary joins A and B "via" that door (the
+    lidar-optimized branch keyed adjacency on doors too); otherwise two
+    parallel walls facing each other across <= ``wall_gap`` with >= min_overlap
+    of shared length make them neighbours through a shared wall.
+    """
+    def seg_dist(p, a, b):
+        ab = b - a
+        t = np.clip(((p - a) @ ab) / max(float(ab @ ab), 1e-12), 0.0, 1.0)
+        return float(np.linalg.norm(p - (a + t * ab)))
+
     out: list[dict] = []
-    for i in range(len(rooms)):
-        si = {id(w) for w in rooms[i].walls}
-        for j in range(i + 1, len(rooms)):
-            if si & {id(w) for w in rooms[j].walls}:
-                out.append({"a": rooms[i].room_id, "b": rooms[j].room_id,
-                            "via": "shared_wall"})
+    for i, ra in enumerate(rooms):
+        for rb in rooms[i + 1:]:
+            link = None
+            for r1, r2 in ((ra, rb), (rb, ra)):
+                for w in r1.walls:
+                    u = (w.end - w.start) / (w.length or 1.0)
+                    for k, o in enumerate(w.openings):
+                        if o.kind != "door":
+                            continue
+                        mid = w.start + u * o.center_along_wall
+                        if min(seg_dist(mid, v.start, v.end) for v in r2.walls) <= wall_gap:
+                            link = {"via": "door", "door": f"{r1.room_id}-w{w.id}-o{k}",
+                                    "width_m": round(o.width_m, 3)}
+                            break
+                    if link:
+                        break
+                if link:
+                    break
+            if link is None:
+                for w in ra.walls:
+                    u = (w.end - w.start) / (w.length or 1.0)
+                    n = np.array([-u[1], u[0]])
+                    for v in rb.walls:
+                        uv = (v.end - v.start) / (v.length or 1.0)
+                        if abs(float(u @ uv)) < 0.97:
+                            continue
+                        if abs(float((v.start - w.start) @ n)) > wall_gap:
+                            continue
+                        t0, t1 = sorted([float((v.start - w.start) @ u), float((v.end - w.start) @ u)])
+                        if min(t1, w.length) - max(t0, 0.0) >= min_overlap:
+                            link = {"via": "shared_wall"}
+                            break
+                    if link:
+                        break
+            if link:
+                out.append({"a": ra.room_id, "b": rb.room_id, **link})
     return out
