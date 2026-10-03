@@ -26,6 +26,7 @@ class Wall:
     points: np.ndarray             # (N, 3) full-height inliers (for openings)
     angle: float                   # [0, pi)
     band_points: np.ndarray | None = None  # (M, 3) points used for the line fit
+    length_sigma: float | None = None      # layout walls: length uncertainty from its two ends
     openings: list[Opening] = field(default_factory=list)
 
 

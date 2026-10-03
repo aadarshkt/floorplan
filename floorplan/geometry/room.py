@@ -93,6 +93,46 @@ def floor_and_ceiling(planes: list, points: np.ndarray, cfg: Settings,
     return floor_z, ceil_z, observed, floor_pts, ceil_pts
 
 
+def room_ceiling(points: np.ndarray, polygon: np.ndarray, floor_z: float,
+                 cam_z: float | None, cfg: Settings
+                 ) -> tuple[float, bool, np.ndarray] | None:
+    """Ceiling of one room: the dense top layer of points inside its polygon.
+
+    Points 0.25 m inside the walls (no wall-top clutter), above the cameras,
+    within the plausible height range; the highest layer holding >= 30 % of the
+    strongest layer's points. Returns (ceil_z, observed, ceiling points).
+    """
+    poly = np.asarray(polygon, dtype=float)
+    c = poly.mean(axis=0)
+    k = np.clip(1 - 0.25 / np.maximum(np.linalg.norm(poly - c, axis=1), 1e-6), 0.5, 1)
+    shrunk = c + (poly - c) * k[:, None]
+    z = points[:, 2]
+    lo = max(floor_z + cfg.ceiling_min_m, (cam_z + 0.2) if cam_z is not None else -np.inf)
+    cand = points[(z >= lo) & (z <= floor_z + cfg.ceiling_max_m + 0.9)]
+    if len(cand) < 200:
+        return None
+    cand = cand[point_in_polygon(cand[:, :2], shrunk)]
+    if len(cand) < 200:
+        return None
+    zc = cand[:, 2]
+    hist, edges = np.histogram(zc, bins=np.arange(zc.min(), zc.max() + 0.02, 0.02))
+    if len(hist) == 0 or hist.max() < 50:
+        return None
+    strong = np.nonzero(hist >= 0.3 * hist.max())[0]
+    i = int(strong.max())
+    cz = float((edges[i] + edges[i + 1]) / 2)
+    layer = cand[np.abs(zc - cz) <= 0.04]
+    # observed only if the layer covers a real part of the room, not a shelf top
+    from scipy.spatial import ConvexHull
+    try:
+        cover = ConvexHull(layer[:, :2]).volume / max(shoelace(poly), 1e-6)
+    except Exception:
+        cover = 0.0
+    if cover < 0.25:
+        return None
+    return float(np.median(layer[:, 2])), True, layer
+
+
 def _floor_below(points: np.ndarray, cam_z: float, cfg: Settings) -> float | None:
     z = points[:, 2]
     zl = z[(z < cam_z - 0.9) & (z > cam_z - 2.2)]
@@ -311,11 +351,13 @@ def assemble_outline(outline: np.ndarray, walls: list[Wall], floor_z: float, cei
     """Build a room whose polygon and area come from the floor outline."""
     poly = np.asarray(outline, dtype=np.float64)
     area_val = shoelace(poly)
-    area_ci = (confidence.bootstrap_hull_area(floor_pts[:, :2], cfg)
-               if len(floor_pts) >= 10 else None)
-    if area_ci is None:
-        area_ci = [round(area_val * 0.97, 3), round(area_val * 1.03, 3)]
-    area_ci = confidence.interval(area_val, area_ci, cfg.ci_floor_area_rel * area_val)
+    # area follows the walls: moving every wall by d changes it by ~ perimeter * d
+    perim = float(np.sum(np.linalg.norm(np.roll(poly, -1, axis=0) - poly, axis=1)))
+    walls_sigma = [w.length_sigma for w in walls if w.length_sigma is not None]
+    d = (float(np.median(walls_sigma)) / np.sqrt(2) if walls_sigma else 0.01)
+    half = 1.96 * perim * d / 2
+    area_ci = confidence.interval(area_val, [area_val - half, area_val + half],
+                                  cfg.ci_floor_area_rel * area_val)
     return Room(
         polygon=[[round(float(x), 3), round(float(y), 3)] for x, y in poly],
         floor_area_m2=Measurement(round(area_val, 3), area_ci, "footprint_outline"),

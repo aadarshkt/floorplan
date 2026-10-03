@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import json
 import math
 import shutil
 import subprocess
@@ -26,6 +27,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
+
+from floorplan.ingest import r3d
 
 
 @dataclass
@@ -44,6 +47,7 @@ class Record3DCapture:
     K: np.ndarray             # (3, 3) RGB intrinsics from camera_matrix.csv
     rgb_size: tuple[int, int] | None      # (w, h)
     depth_size: tuple[int, int] | None    # (w, h)
+    pose_convention: str | None = None    # known convention (.r3d: c2w_gl); None = auto-detect
 
     @property
     def n_frames(self) -> int:
@@ -156,7 +160,9 @@ def is_record3d_zip(path: Path) -> bool:
 def load(path: str | Path) -> Record3DCapture:
     """Load a Record3D capture from a directory or ZIP."""
     p = Path(path)
-    if p.is_file() and p.suffix.lower() == ".zip":
+    if r3d.is_r3d(p):
+        base = r3d.unpack(p)
+    elif p.is_file() and p.suffix.lower() == ".zip":
         base = _ensure_extracted(p)
     else:
         base = p
@@ -183,7 +189,11 @@ def load(path: str | Path) -> Record3DCapture:
         pos, quat, intr, ts = pos[:n], quat[:n], intr[:n], ts[:n]
 
     depth_size = _image_size(depth_paths[0]) if depth_paths else None
-    rgb_size = _probe_video_size(rgb_path) or (1920, 1440)
+    src_meta = root / "source.json"          # written by ingest.r3d (no rgb.mp4 needed)
+    meta_size = tuple(json.loads(src_meta.read_text())["rgb_size"]) if src_meta.exists() else None
+    rgb_size = _probe_video_size(rgb_path) or meta_size or (1920, 1440)
+    conv_file = root / "pose_convention.txt"
+    pose_convention = conv_file.read_text().strip() if conv_file.exists() else None
 
     return Record3DCapture(
         capture_id=root.name,
@@ -198,6 +208,7 @@ def load(path: str | Path) -> Record3DCapture:
         K=K,
         rgb_size=rgb_size,
         depth_size=depth_size,
+        pose_convention=pose_convention,
     )
 
 

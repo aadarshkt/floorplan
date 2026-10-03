@@ -21,7 +21,8 @@ Here one polygon carries every number:
                 behind it, so lengths are interior face-to-face (what a laser
                 measures), not grid-quantised
 
-Returns polygons in world XY, counter-clockwise.
+Returns (polygon, edge_spread) per room: polygon in world XY, counter-clockwise;
+edge_spread[k] is the wall-surface spread of edge k (vertex k -> k+1), metres.
 """
 from __future__ import annotations
 
@@ -177,28 +178,62 @@ def _rectilinear(verts: np.ndarray, min_edge: float) -> np.ndarray:
     return v
 
 
-def _refine(v: np.ndarray, band_xy: np.ndarray, search: float) -> np.ndarray:
-    """Move each axis-aligned edge to the median of the wall points just outside it."""
+def _inside(pt: np.ndarray, poly: np.ndarray) -> bool:
+    x, y = pt
+    inside = False
+    n = len(poly)
+    for i in range(n):
+        x1, y1 = poly[i]
+        x2, y2 = poly[(i + 1) % n]
+        if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / ((y2 - y1) or 1e-12) + x1:
+            inside = not inside
+    return inside
+
+
+def _refine(v: np.ndarray, band_xy: np.ndarray, search: float
+            ) -> tuple[np.ndarray, np.ndarray]:
+    """Snap each axis-aligned edge to the inside face of its wall.
+
+    The free-space boundary stops at the first obstacle, a few cm to tens of cm
+    short of the wall. Looking outward from the edge (up to ``search``, and a
+    little inward), the wall face is the first dense layer of wall points; the
+    edge moves to the median of that layer. Also returns each edge's spread
+    (1.4826 x MAD of the layer's offsets), used for the length interval.
+    """
     n = len(v)
     v = v.copy()
-    pos = []
+    pos, spread = [], []
     for k in range(n):
         a, b = v[k], v[(k + 1) % n]
         horiz = abs(b[1] - a[1]) < 1e-9
         ax, cross = (0, 1) if horiz else (1, 0)
         lo, hi = sorted([a[ax], b[ax]])
         c = a[cross]
-        m = ((band_xy[:, ax] > lo + 0.1) & (band_xy[:, ax] < hi - 0.1)
-             & (np.abs(band_xy[:, cross] - c) < search))
-        pos.append(float(np.median(band_xy[m, cross])) if m.sum() >= 30 else c)
+        # which side is outside the room?
+        mid = (a + b) / 2
+        probe = mid.copy()
+        probe[cross] += 0.05
+        sign = -1.0 if _inside(probe, v) else 1.0
+        m = (band_xy[:, ax] > lo + 0.1) & (band_xy[:, ax] < hi - 0.1)
+        off = (band_xy[m, cross] - c) * sign          # >0: outward
+        off = off[(off > -0.08) & (off < search)]
+        if len(off) < 30:
+            pos.append(c)
+            spread.append(search / 2)          # unsupported edge: wide
+            continue
+        hist, edges = np.histogram(off, bins=np.arange(-0.08, search + 0.02, 0.02))
+        first = int(np.nonzero(hist >= 0.3 * hist.max())[0].min())
+        layer = off[(off >= edges[first] - 0.02) & (off <= edges[first + 1] + 0.04)]
+        med = float(np.median(layer))
+        pos.append(c + sign * med)
+        spread.append(1.4826 * float(np.median(np.abs(layer - med))))
     for k in range(n):
-        a_k = k
-        b_k = (k + 1) % n
+        a_k, b_k = k, (k + 1) % n
         horiz = abs(v[b_k][1] - v[a_k][1]) < 1e-9
         cross = 1 if horiz else 0
         v[a_k][cross] = pos[k]
         v[b_k][cross] = pos[k]
-    return v
+    return v, np.asarray(spread)
 
 
 def rooms(points: np.ndarray, floor_z: float, ceil_z: float, observed: bool,
@@ -293,12 +328,19 @@ def rooms(points: np.ndarray, floor_z: float, ceil_z: float, observed: bool,
         verts = _rectilinear(verts, cfg.layout_min_edge)
         if len(verts) < 4:
             continue
-        verts = _refine(verts, bxy, cfg.layout_refine_m)
+        verts, _ = _refine(verts, bxy, cfg.layout_refine_m)
+        # snapping can create tiny jogs; clean up and snap once more
+        verts = _rectilinear(verts, cfg.layout_min_edge)
+        if len(verts) < 4:
+            continue
+        verts, spread = _refine(verts, bxy, cfg.layout_refine_m / 2)
         verts = verts @ R                              # back to world XY
         x, y = verts[:, 0], verts[:, 1]
         if np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1)) < 0:
+            # reverse the vertex order; edge k (v_k -> v_k+1) becomes edge n-2-k
             verts = verts[::-1]
-        out.append(verts)
+            spread = np.roll(spread[::-1], -1)
+        out.append((verts, spread))
         if not cfg.layout_multi_room:
             break
     return out

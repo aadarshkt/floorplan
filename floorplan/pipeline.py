@@ -268,10 +268,20 @@ def _geometry_and_export(pts: np.ndarray, capture_id: str, tier: str, out: Path,
         cams_xy = ((np.asarray(cameras[1]) @ R_up.T)[:, :2]
                    if cameras is not None and len(cameras[1]) else None)
         polys = layout_mod.rooms(pts, floor_z, ceil_z, observed, cams_xy, theta, cfg)
-        for k, poly in enumerate(polys):
+        for k, (poly, spread) in enumerate(polys):
             owalls = walls_mod.from_outline(poly, pts, floor_z, cfg)
-            r = room_mod.assemble_outline(poly, owalls, floor_z, ceil_z, observed,
-                                          floor_pts, ceil_pts, cfg)
+            n_e = len(poly)
+            for e, w in enumerate(owalls):
+                # a wall's length runs between its two neighbouring walls' surfaces
+                w.length_sigma = float(np.hypot(spread[(e - 1) % n_e], spread[(e + 1) % n_e]))
+            rc = room_mod.room_ceiling(pts, poly, floor_z, cam_z, cfg)
+            r_ceil, r_obs, r_ceil_pts = rc if rc is not None else (ceil_z, observed, ceil_pts)
+            r_floor_pts = floor_pts[room_mod.point_in_polygon(floor_pts[:, :2], poly)] \
+                if len(floor_pts) else floor_pts
+            if len(r_floor_pts) < 30:
+                r_floor_pts = floor_pts
+            r = room_mod.assemble_outline(poly, owalls, floor_z, r_ceil, r_obs,
+                                          r_floor_pts, r_ceil_pts, cfg)
             r.room_id = f"r{k + 1}"
             rooms.append(r)
     if not rooms:
@@ -296,8 +306,15 @@ def _geometry_and_export(pts: np.ndarray, capture_id: str, tier: str, out: Path,
 
     t0 = time.time()
     wall_ci: dict[int, list[float]] = {}
+    cloud_sub = pts[np.linspace(0, len(pts) - 1, min(len(pts), 800_000)).astype(int)]
     for w in (w for r in rooms for w in r.walls):
-        w.openings = openings_mod.detect(w.start, w.end, w.points, floor_z, cfg)
+        inward = w.normal if w.plane_id == -1 else None   # layout walls: normal points inside
+        w.openings = openings_mod.detect(w.start, w.end, w.points, floor_z, cfg,
+                                         cloud=cloud_sub, inward=inward)
+        if w.length_sigma is not None:
+            half = 1.96 * w.length_sigma
+            wall_ci[w.id] = [round(w.length - half, 4), round(w.length + half, 4)]
+            continue
         bp = w.band_points if w.band_points is not None and len(w.band_points) >= 30 else w.points
         ci = confidence.bootstrap_length(bp, cfg)
         if ci is not None:
@@ -330,7 +347,8 @@ def _geometry_and_export(pts: np.ndarray, capture_id: str, tier: str, out: Path,
     json_export.dump(payload, out / "results.json")
     label = {"lidar": "LiDAR", "photos": "Photos", "video": "Video"}.get(tier, tier)
     svg.render(rooms, out / "floor_plan.svg",
-               title=f"{capture_id} — {label} ({len(rooms)} room{'s' if len(rooms) != 1 else ''})")
+               title=f"{capture_id} — {label} ({len(rooms)} room{'s' if len(rooms) != 1 else ''})",
+               payload=payload)
     dxf.render(rooms, out / "floor_plan.dxf")
     prov = provenance.write(out / "provenance.json", tier=tier, capture_id=capture_id,
                             cfg=cfg, timings=timings, path_chosen=recon.path_chosen,

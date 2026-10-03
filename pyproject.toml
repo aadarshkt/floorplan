@@ -11,6 +11,7 @@ dependencies = [
     "ezdxf>=1.1",
     "svgwrite>=1.4",
     "structlog>=24.1",
+    "lzfse>=0.4",                   # Record3D .r3d depth/confidence
 ]
 
 [project.optional-dependencies]

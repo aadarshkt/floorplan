@@ -27,7 +27,7 @@ walls = W.snap_orthogonal(W.merge_double_walls(
     W.vectorize([p for p in pls if p.kind == "vertical"], fz, cfg), cfg), cfg)
 theta = max(walls, key=lambda w: w.length).angle if walls else 0.0
 band = L._band(pts, fz, cz, obs)
-polys = L.rooms(pts, fz, cz, obs, cams[:, :2], theta, cfg)
+polys = [p for p, _ in L.rooms(pts, fz, cz, obs, cams[:, :2], theta, cfg)]
 print(f"floor {fz:.2f} ceil {cz:.2f} observed={obs} height {cz - fz:.2f}")
 for p in polys:
     e = np.linalg.norm(np.roll(p, -1, 0) - p, axis=1)

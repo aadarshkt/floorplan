@@ -106,18 +106,23 @@ def _accumulate(capture, cfg: Settings, idxs, intr, convention: str, px_stride: 
 
 
 def _convention_score(points: np.ndarray, cfg: Settings) -> float:
-    """Lower is better: how close the biggest planes are to axis-aligned (walls
-    vertical, floor/ceiling horizontal) in a Z-up frame."""
+    """Lower is better: occupied 5 cm voxels per point.
+
+    With the right convention, overlapping frames land on the same surfaces and
+    the cloud is crisp (few voxels); a wrong one smears every frame around its
+    camera. Measured on the five benchmark captures this separates conventions
+    by 1.2-3x, where a plane-orientation score picked the wrong one on a long
+    multi-room scan.
+    """
     if len(points) < 2000:
         return 1.0
-    pls = planes_mod.extract_planes(points, cfg)
-    if not pls:
-        return 1.0
-    big = sorted(pls, key=lambda p: -len(p.points))[:6]
-    return float(np.mean([min(abs(p.normal[2]), 1.0 - abs(p.normal[2])) for p in big]))
+    vox = np.unique(np.floor(points / 0.05).astype(np.int64), axis=0)
+    return len(vox) / len(points)
 
 
-def detect_pose_convention(capture, cfg: Settings, n_frames: int = 40) -> str:
+def detect_pose_convention(capture, cfg: Settings, n_frames: int = 60) -> str:
+    if getattr(capture, "pose_convention", None):
+        return capture.pose_convention           # known from the file format
     stride = max(1, capture.n_frames // n_frames)
     idxs = list(range(0, capture.n_frames, stride))
     intr = record3d.depth_intrinsics(capture)

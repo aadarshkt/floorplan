@@ -50,7 +50,7 @@ class Settings:
     # single room can come back with a dozen walls. Above this wall count the
     # room outline is rebuilt from the floor footprint instead of the sheet network.
     max_room_walls: int = 4
-    ceiling_min_m: float = 1.8         # plausible occupied ceiling height range
+    ceiling_min_m: float = 2.1         # plausible ceiling range (habitable rooms are >= ~2.1 m)
     ceiling_max_m: float = 3.6
     ceiling_plane_min_frac: float = 0.10  # a ceiling plane needs this share of the floor plane's points
     wall_outline_band_m: float = 0.40  # cloud points this close to an outline edge belong to it
@@ -66,7 +66,7 @@ class Settings:
     layout_seal_min_run_m: float = 0.6  # ...when both sides are wall runs at least this long
     layout_smooth_m: float = 0.06     # close/open radius removing grid noise
     layout_min_edge: float = 0.25     # drop wall jogs shorter than this
-    layout_refine_m: float = 0.15     # search band when snapping an edge to its wall points
+    layout_refine_m: float = 0.40     # how far outward to look for the wall face when snapping an edge
     layout_multi_room: bool = True    # every camera-visited free-space component is a room
 
     # ── drift correction ─────────────────────────────────────────────────────
@@ -75,7 +75,11 @@ class Settings:
 
     # ── openings ─────────────────────────────────────────────────────────────
     opening_bin: float = 0.05
-    min_opening_width: float = 0.5
+    min_opening_width: float = 0.55   # doors narrower than this are not doors
+    min_window_width: float = 0.35
+    max_opening_width: float = 3.0
+    opening_surface_m: float = 0.12   # wall-face band for opening evidence
+    opening_seen_min: int = 30        # points beyond the wall that prove a gap is open
     door_height: float = 2.0
     opening_height_band_top: float = 2.1
 

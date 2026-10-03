@@ -102,7 +102,25 @@ def main(argv: list[str] | None = None) -> int:
     _add_recon_flags(x)
     x.add_argument("--quiet", action="store_true")
 
+    g = sub.add_parser("gt-template", help="write a ground-truth file to fill in, listing every "
+                                           "wall and opening of a finished run")
+    g.add_argument("run_dir", help="output directory of `floorplan run`")
+    g.add_argument("--out", default=None, help="file to write (default: print)")
+
     args = ap.parse_args(argv)
+
+    if args.cmd == "gt-template":
+        import json
+        from pathlib import Path
+        from floorplan.eval import groundtruth
+        res = json.loads((Path(args.run_dir) / "results.json").read_text())
+        txt = json.dumps(groundtruth.template(res, res.get("capture_id", "")), indent=2) + "\n"
+        if args.out:
+            Path(args.out).write_text(txt)
+            print(f"wrote {args.out}: fill every null with your measurement (metres)")
+        else:
+            print(txt)
+        return 0
 
     if args.cmd == "run":
         tier = None if args.tier == "auto" else args.tier
