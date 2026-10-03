@@ -23,9 +23,29 @@ def _settings_from_args(a: argparse.Namespace) -> Settings:
         cfg.engine = a.engine
     if getattr(a, "scale_ref", None) is not None:
         cfg.scale_ref_m = a.scale_ref
+    if getattr(a, "scale_ref_kind", None):
+        cfg.scale_ref_kind = a.scale_ref_kind
+    if getattr(a, "reference_capture", None):
+        cfg.reference_capture = a.reference_capture
+    if getattr(a, "fps", None) is not None:
+        cfg.video_fps = a.fps
     if getattr(a, "no_drift_correction", False):
         cfg.drift_correction = False
     return cfg
+
+
+def _add_recon_flags(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--engine", default=None, choices=["auto", "monodepth", "colmap"],
+                   help="photo/video reconstruction engine (default auto)")
+    p.add_argument("--scale-ref", type=float, default=None,
+                   help="known real-world length (m) used to anchor photo/video scale")
+    p.add_argument("--scale-ref-kind", default=None,
+                   choices=["door_width", "ceiling_height", "room_height", "door_height"],
+                   help="what --scale-ref measures (default ceiling_height for anchoring)")
+    p.add_argument("--reference-capture", default=None,
+                   help="paired Record3D capture of the same room (metric scale/geometry)")
+    p.add_argument("--fps", type=float, default=None,
+                   help="keyframe rate for the video tier (default 2)")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -40,10 +60,7 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("input", help="Record3D export (folder or .zip), photo folder, or video file")
     r.add_argument("--out", required=True, help="output directory")
     r.add_argument("--tier", default="auto", choices=["auto", "lidar", "photos", "video"])
-    r.add_argument("--engine", default=None, choices=["auto", "monodepth", "colmap"],
-                   help="photo/video reconstruction engine (default auto)")
-    r.add_argument("--scale-ref", type=float, default=None,
-                   help="known real-world length (m) for photo/video scale anchoring")
+    _add_recon_flags(r)
     r.add_argument("--conf-min", type=int, default=None,
                    help="minimum depth confidence to keep (Record3D: 0/1/2)")
     r.add_argument("--max-frames", type=int, default=None,
@@ -59,6 +76,7 @@ def main(argv: list[str] | None = None) -> int:
                    help="where per-capture pipeline outputs live (default: <out>/runs). "
                         "Existing results.json here are reused unless --force")
     b.add_argument("--force", action="store_true", help="re-run the pipeline for every capture")
+    _add_recon_flags(b)
     b.add_argument("--conf-min", type=int, default=None)
     b.add_argument("--max-frames", type=int, default=None)
     b.add_argument("--no-drift-correction", action="store_true")

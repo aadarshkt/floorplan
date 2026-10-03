@@ -21,7 +21,8 @@ def build_payload(capture_id: str, tier: str, rooms: list[Room],
                   wall_ci: dict[int, list[float]], cfg: Settings,
                   property_footprint: dict | None = None,
                   adjacency: list[dict] | None = None,
-                  drift: dict | None = None) -> dict:
+                  drift: dict | None = None,
+                  scale: dict | None = None) -> dict:
     rooms_payload = []
     for room in rooms:
         rid = room.room_id or "r1"
@@ -84,6 +85,8 @@ def build_payload(capture_id: str, tier: str, rooms: list[Room],
         "rooms": rooms_payload,
         "drift": drift or {"method": "none", "n_loops": 0, "correction_applied": False,
                            "ablation": {"on": None, "off": None}},
+        "scale": scale or {"scale_reference": "native_metric", "scale_factor": 1.0,
+                           "metric": True},
         "confidence": {"calibration_factor": 1.0, "method": "bootstrap+propagation"},
         "artifacts": {
             "svg": "floor_plan.svg",

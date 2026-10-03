@@ -70,6 +70,19 @@ class Settings:
     scale_ref_kind: str = "door_width"
     default_ceiling_m: float = 2.5    # fallback when the ceiling was never observed
     min_photos_for_colmap: int = 12   # below this, monocular depth is used
+    video_fps: float = 2.0            # keyframe rate for the video tier
+    colmap_exhaustive_max: int = 150  # exhaustive matching below this many images
+    colmap_dense: bool = True         # attempt dense MVS (needs CUDA); else sparse
+    mvs_enable: bool = True           # CPU plane-sweep densification from SfM poses
+    mvs_max_dim: int = 192            # working resolution (longest image side)
+    mvs_neighbors: int = 6            # source views per reference image
+    mvs_depth_samples: int = 48       # plane-sweep depth hypotheses
+    mvs_cost_tol: float = 0.06        # max photometric cost (0..1 scale) to accept
+    mvs_ref_max: int = 40             # reference views to sweep (0 = all)
+    mvs_max_points: int = 400_000     # cap on the densified cloud
+    anchor_icp_max_dist: float = 1.0  # similarity-ICP correspondence distance (m)
+    reference_capture: str | None = None  # paired Record3D capture for scale/geometry
+    ci_none_prior_scale: float = 4.0  # widen intervals when scale_reference=none_prior
 
     def to_dict(self) -> dict:
         return asdict(self)

@@ -26,7 +26,8 @@ def _input_hash(path: str | Path) -> str:
 
 
 def write(out: str | Path, *, tier: str, capture_id: str, cfg: Settings,
-          timings: dict, path_chosen: str, input_path: str | Path) -> dict:
+          timings: dict, path_chosen: str, input_path: str | Path,
+          extra: dict | None = None) -> dict:
     payload = {
         "floorplan_version": __version__,
         "generated_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
@@ -39,5 +40,7 @@ def write(out: str | Path, *, tier: str, capture_id: str, cfg: Settings,
         "timings_s": {k: round(float(v), 3) for k, v in timings.items()},
         "total_s": round(float(sum(timings.values())), 3),
     }
+    if extra:
+        payload.update(extra)
     Path(out).write_text(json.dumps(payload, indent=2) + "\n")
     return payload

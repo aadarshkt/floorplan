@@ -1,0 +1,156 @@
+{
+  "schema_version": "1.0",
+  "capture_id": "rgb",
+  "tier": "video",
+  "units": "meters",
+  "property": {
+    "footprint_area_m2": {
+      "value": 4.771,
+      "ci95": [
+        4.5337,
+        4.8188
+      ],
+      "method": "bootstrap_hull"
+    },
+    "rooms": [
+      "r1"
+    ],
+    "adjacency": []
+  },
+  "rooms": [
+    {
+      "room_id": "r1",
+      "polygon": [
+        [
+          -3.379,
+          -2.178
+        ],
+        [
+          -3.034,
+          -2.189
+        ],
+        [
+          -2.525,
+          -2.155
+        ],
+        [
+          -2.053,
+          0.85
+        ],
+        [
+          -2.463,
+          0.658
+        ],
+        [
+          -3.334,
+          0.728
+        ]
+      ],
+      "floor_area_m2": {
+        "value": 4.771,
+        "ci95": [
+          4.5337,
+          4.8188
+        ],
+        "method": "bootstrap_hull"
+      },
+      "ceiling_height_m": {
+        "value": 2.495,
+        "ci95": [
+          2.345,
+          2.645
+        ],
+        "method": "inferred_from_wall_tops",
+        "observed": false
+      },
+      "walls": [
+        {
+          "wall_id": "r1-w0",
+          "start": [
+            -3.034,
+            -2.189
+          ],
+          "end": [
+            -2.053,
+            0.85
+          ],
+          "length_m": {
+            "value": 3.1933,
+            "ci95": [
+              3.0048,
+              3.2033
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w1",
+          "start": [
+            -3.334,
+            0.728
+          ],
+          "end": [
+            -2.525,
+            -2.155
+          ],
+          "length_m": {
+            "value": 2.9945,
+            "ci95": [
+              2.9561,
+              3.0045
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w2",
+          "start": [
+            -3.379,
+            -2.178
+          ],
+          "end": [
+            -2.463,
+            0.658
+          ],
+          "length_m": {
+            "value": 2.9808,
+            "ci95": [
+              2.8958,
+              2.9908
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        }
+      ],
+      "damage_regions": [],
+      "concealed_damage_flags": [],
+      "scope_line_items": []
+    }
+  ],
+  "drift": {
+    "method": "sfm_bundle_adjustment",
+    "n_loops": 0,
+    "correction_applied": false,
+    "ablation": {
+      "on": null,
+      "off": null
+    }
+  },
+  "scale": {
+    "scale_reference": "scaled_via_reference",
+    "scale_factor": 0.1507,
+    "metric": true
+  },
+  "confidence": {
+    "calibration_factor": 1.0,
+    "method": "bootstrap+propagation"
+  },
+  "artifacts": {
+    "svg": "floor_plan.svg",
+    "dxf": "floor_plan.dxf",
+    "pointcloud": "scan_metric.ply"
+  }
+}

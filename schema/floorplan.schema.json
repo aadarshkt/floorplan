@@ -81,6 +81,15 @@
         "ablation": { "type": "object", "properties": { "on": { "type": ["number", "null"] }, "off": { "type": ["number", "null"] } } }
       }
     },
+    "scale": {
+      "type": "object",
+      "description": "How metric scale was established for this capture.",
+      "properties": {
+        "scale_reference": { "type": "string", "enum": ["native_metric", "scaled_via_reference", "none_prior"] },
+        "scale_factor": { "type": "number" },
+        "metric": { "type": "boolean" }
+      }
+    },
     "confidence": {
       "type": "object",
       "properties": { "calibration_factor": { "type": "number" }, "method": { "type": "string" } }
