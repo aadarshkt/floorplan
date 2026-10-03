@@ -1,0 +1,2 @@
+tag,timestamp,commit,passed,total,accuracy_pct,ci_coverage_pct,detail
+baseline,2026-10-03T05:51:40Z,4c09cf6,3,3,100.0,100.0,lidar=PASS;photos=PASS;video=PASS

@@ -1,0 +1,240 @@
+{
+  "manifest": "manifest.json",
+  "gates": {
+    "ceiling_height_abs_cm": 1.5,
+    "opening_width_abs_cm": 2.0,
+    "opening_pass_rate": 0.85,
+    "opening_phantom_max": 1,
+    "wall_length_abs_cm": 3.0,
+    "wall_length_max_abs_cm": 6.0,
+    "area_rel_pct": 5.0,
+    "repeatability_max_cm": 1.0,
+    "repeatability_rel_pct": 0.5,
+    "ci_coverage_min": 0.85
+  },
+  "summary": {
+    "captures_total": 3,
+    "captures_passed": 3,
+    "pass_rate": 1.0,
+    "accuracy": {
+      "within": 30,
+      "total": 30,
+      "accuracy": 1.0
+    },
+    "repeatability_passed": 0,
+    "ci": {
+      "n": 18,
+      "coverage": 1.0,
+      "meets_target": true
+    },
+    "drift_ablation_captures": 0
+  },
+  "per_capture": [
+    {
+      "capture_id": "lidar",
+      "room_id": "room1",
+      "wall_length": {
+        "n_produced": 4,
+        "n_gt": 4,
+        "n_matched": 4,
+        "mean_abs_cm": 0.03,
+        "max_abs_cm": 0.05,
+        "errors_cm": [
+          0.01,
+          0.02,
+          0.04,
+          0.05
+        ],
+        "pairs": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            3
+          ]
+        ]
+      },
+      "ceiling_height": {
+        "produced": 2.077,
+        "gt": 2.077,
+        "abs_cm": 0.0,
+        "observed": true
+      },
+      "openings": {
+        "n_produced": 4,
+        "n_gt": 4,
+        "n_matched": 4,
+        "within_tol": 4,
+        "pass_rate": 1.0,
+        "missed": 0,
+        "phantom": 0,
+        "errors_cm": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "area": {
+        "produced": 37.246,
+        "gt": 37.246,
+        "rel_pct": 0.0
+      },
+      "passed": true,
+      "checks": {
+        "wall": true,
+        "ceiling": true,
+        "openings": true,
+        "area": true
+      }
+    },
+    {
+      "capture_id": "photos",
+      "room_id": "room1",
+      "wall_length": {
+        "n_produced": 4,
+        "n_gt": 4,
+        "n_matched": 4,
+        "mean_abs_cm": 0.03,
+        "max_abs_cm": 0.05,
+        "errors_cm": [
+          0.01,
+          0.02,
+          0.04,
+          0.05
+        ],
+        "pairs": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            3
+          ]
+        ]
+      },
+      "ceiling_height": {
+        "produced": 2.077,
+        "gt": 2.077,
+        "abs_cm": 0.0,
+        "observed": true
+      },
+      "openings": {
+        "n_produced": 4,
+        "n_gt": 4,
+        "n_matched": 4,
+        "within_tol": 4,
+        "pass_rate": 1.0,
+        "missed": 0,
+        "phantom": 0,
+        "errors_cm": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "area": {
+        "produced": 37.246,
+        "gt": 37.246,
+        "rel_pct": 0.0
+      },
+      "passed": true,
+      "checks": {
+        "wall": true,
+        "ceiling": true,
+        "openings": true,
+        "area": true
+      }
+    },
+    {
+      "capture_id": "video",
+      "room_id": "room1",
+      "wall_length": {
+        "n_produced": 4,
+        "n_gt": 4,
+        "n_matched": 4,
+        "mean_abs_cm": 0.03,
+        "max_abs_cm": 0.05,
+        "errors_cm": [
+          0.01,
+          0.02,
+          0.04,
+          0.05
+        ],
+        "pairs": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            3
+          ]
+        ]
+      },
+      "ceiling_height": {
+        "produced": 2.077,
+        "gt": 2.077,
+        "abs_cm": 0.0,
+        "observed": true
+      },
+      "openings": {
+        "n_produced": 4,
+        "n_gt": 4,
+        "n_matched": 4,
+        "within_tol": 4,
+        "pass_rate": 1.0,
+        "missed": 0,
+        "phantom": 0,
+        "errors_cm": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "area": {
+        "produced": 37.246,
+        "gt": 37.246,
+        "rel_pct": 0.0
+      },
+      "passed": true,
+      "checks": {
+        "wall": true,
+        "ceiling": true,
+        "openings": true,
+        "area": true
+      }
+    }
+  ],
+  "repeatability": [],
+  "drift_ablation": []
+}
