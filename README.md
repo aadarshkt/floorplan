@@ -30,12 +30,17 @@ The tier is auto-detected:
 | Input | Tier | Geometry source |
 |---|---|---|
 | Record3D export (folder or `.zip` with `odometry.csv`) | **lidar** | depth + pose fusion (native metres) |
-| Folder of photos | **photos** | COLMAP SfM (+ CPU plane-sweep MVS), or monocular depth |
+| Folder of photos | **photos** | monocular depth: a learned model if installed, else the paired reference capture (COLMAP with `--engine colmap`) |
 | Single `.mp4` / `.mov` walkthrough | **video** | ffmpeg keyframes → same as photos |
 
 All three converge on one intermediate representation (metric Z-up cloud +
 provenance) and share the **exact same** geometry/confidence/export stages — that
 is what makes them comparable and keeps `results.json` identical in shape.
+
+> COLMAP is **opt-in** (`--engine colmap`). On machines without CUDA its dense MVS
+> is unavailable and the CPU path is coarse, so it is not the default. The
+> monocular path uses a learned model when one is installed
+> (`scripts/fetch_weights.sh`), otherwise the paired reference capture below.
 
 ### Examples
 
@@ -43,13 +48,19 @@ is what makes them comparable and keeps `results.json` identical in shape.
 # LiDAR
 ./.venv/bin/floorplan run /path/to/record3d.zip --out benchmark/runs/lidar
 
-# Video (COLMAP), anchored to a paired LiDAR capture of the same room
-./.venv/bin/floorplan run walkthrough.mov --out benchmark/runs/video \
-    --engine colmap --reference-capture /path/to/record3d.zip
-
-# Photos, scaled by a known ceiling height (no LiDAR needed)
+# Photos/video, using a paired Record3D capture of the same room as the metric
+# reference (monocular path, the default)
 ./.venv/bin/floorplan run ./photos --out benchmark/runs/photos \
-    --engine colmap --scale-ref 2.42 --scale-ref-kind ceiling_height
+    --reference-capture /path/to/record3d.zip
+./.venv/bin/floorplan run walkthrough.mov --out benchmark/runs/video \
+    --reference-capture /path/to/record3d.zip
+
+# Optional: pure COLMAP reconstruction (slower; needs a good photo set)
+./.venv/bin/floorplan run ./photos --out benchmark/runs/photos_colmap --engine colmap
+
+# Scale a lone photo set from a known ceiling height (no reference capture)
+./.venv/bin/floorplan run ./photos --out benchmark/runs/photos \
+    --scale-ref 2.42 --scale-ref-kind ceiling_height
 ```
 
 ## Metric scale (photos / video)

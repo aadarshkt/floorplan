@@ -94,3 +94,29 @@ def test_arbiter_prefers_planar_cloud():
     winner, table = arbiter.choose([a, b], cfg)
     assert winner.path_chosen == "room"
     assert len(table) == 2
+
+
+def test_monodepth_without_backend_raises(tmp_path):
+    from PIL import Image
+    from floorplan.fusion import monodepth
+    folder = tmp_path / "imgs"
+    folder.mkdir()
+    Image.new("RGB", (32, 24), (5, 5, 5)).save(folder / "0.png")
+    ps = photos.load(folder)
+    if monodepth.available_backends():  # a learned model is installed; skip
+        return
+    with pytest.raises(RuntimeError):
+        monodepth.reconstruct(ps, Settings(), tmp_path, reference_points=None)
+
+
+def test_monodepth_cross_tier_returns_reference(tmp_path):
+    from PIL import Image
+    from floorplan.fusion import monodepth
+    folder = tmp_path / "imgs"
+    folder.mkdir()
+    Image.new("RGB", (32, 24), (5, 5, 5)).save(folder / "0.png")
+    ps = photos.load(folder)
+    ref = _room_cloud()
+    r = monodepth.reconstruct(ps, Settings(), tmp_path, reference_points=ref)
+    assert r.scale_reference == SCALED
+    assert len(r.points) == len(ref)

@@ -89,10 +89,11 @@ def reconstruct(photos: PhotoSet, cfg: Settings, workdir: Path,
 
     if reference_points is not None and len(reference_points) > 0:
         # Cross-tier anchor: the paired metric capture supplies the geometry.
+        # It is already in the canonical Z-up metric frame, so do not re-orient.
         return Reconstruction(points=np.asarray(reference_points, dtype=np.float64),
                               tier="photos", path_chosen="monodepth:cross_tier_reference",
                               scale_reference=SCALED,
-                              notes={"backend": "cross_tier"})
+                              notes={"backend": "cross_tier", "prealigned": True})
 
     raise RuntimeError(
         "No monocular-depth backend is available. Install one of:\n"

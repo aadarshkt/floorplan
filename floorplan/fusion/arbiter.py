@@ -7,8 +7,6 @@ the report can always say *which* code path produced a number.
 """
 from __future__ import annotations
 
-import math
-
 import numpy as np
 
 from floorplan.config import Settings
@@ -17,14 +15,28 @@ from floorplan.geometry import planes as planes_mod
 
 
 def score(points: np.ndarray, cfg: Settings) -> dict:
-    if len(points) < 100:
-        return {"score": -1.0, "n_vertical": 0, "n_horizontal": 0, "n_points": len(points)}
+    """Reward planarity *coverage*, not plane count.
+
+    A noisy cloud yields many tiny spurious planes; the useful cloud has a few
+    large ones (floor, ceiling, walls) that between them carry most of the
+    points. So we score by the share of points lying in "large" planes (>=1% of
+    the cloud) plus a small bonus for having enough of them.
+    """
+    n = len(points)
+    if n < 100:
+        return {"score": -1.0, "coverage": 0.0, "n_vertical": 0, "n_horizontal": 0,
+                "n_points": n}
     pls = planes_mod.extract_planes(points, cfg)
-    n_v = sum(1 for p in pls if p.kind == "vertical")
-    n_h = sum(1 for p in pls if p.kind == "horizontal")
-    s = 3.0 * min(n_v, 8) + 2.0 * min(n_h, 2) + math.log10(max(len(points), 1))
-    return {"score": round(float(s), 3), "n_vertical": n_v, "n_horizontal": n_h,
-            "n_points": int(len(points))}
+    if not pls:
+        return {"score": -1.0, "coverage": 0.0, "n_vertical": 0, "n_horizontal": 0,
+                "n_points": n}
+    big = [p for p in pls if len(p.points) >= 0.01 * n]
+    coverage = sum(len(p.points) for p in big) / n
+    n_v = sum(1 for p in big if p.kind == "vertical")
+    n_h = sum(1 for p in big if p.kind == "horizontal")
+    s = 10.0 * coverage + 3.0 * min(n_v, 6) + 2.0 * min(n_h, 2)
+    return {"score": round(float(s), 3), "coverage": round(float(coverage), 3),
+            "n_vertical": n_v, "n_horizontal": n_h, "n_points": int(n)}
 
 
 def choose(candidates: list[Reconstruction], cfg: Settings,
@@ -41,7 +53,8 @@ def choose(candidates: list[Reconstruction], cfg: Settings,
     if verbose:
         for row in table:
             print(f"[arbiter] {row['path']}: score={row['score']} "
-                  f"(walls={row['n_vertical']}, horiz={row['n_horizontal']}, pts={row['n_points']})")
+                  f"(walls={row['n_vertical']}, horiz={row['n_horizontal']}, "
+                  f"coverage={row.get('coverage')}, pts={row['n_points']})")
         print(f"[arbiter] chose {best.path_chosen}")
     best.notes = {**best.notes, "arbiter": table, "winner": best.path_chosen}
     return best, table

@@ -108,25 +108,27 @@ def _run_photo_video(capture_path: str | Path, out: Path, cfg: Settings,
     failures: list[str] = []
     t0 = time.time()
 
-    want_colmap = cfg.engine in ("auto", "colmap") and colmap_path.available() and (
-        cfg.engine == "colmap" or photos.n_images >= cfg.min_photos_for_colmap)
-    if want_colmap:
-        try:
-            cr = colmap_path.reconstruct(photos, cfg, out / "colmap", verbose)
-            pts, s, ref, notes = scale.anchor(cr.points, cfg, reference_points)
-            candidates.append(Reconstruction(
-                points=pts, tier=tier,
-                path_chosen=f"colmap:{cr.dense}",
-                scale_reference=ref, scale_factor=s, conf=cr.conf,
-                notes={**notes, "registered": cr.n_registered, "images": cr.n_images,
-                       "points_raw": cr.n_points, "camera_centres": cr.centres,
-                       "up_hint": cr.up_hint}))
-        except Exception as exc:
-            failures.append(f"colmap: {exc}")
-            if verbose:
-                print(f"[colmap] failed: {exc}")
-    elif cfg.engine in ("auto", "colmap") and not colmap_path.available():
-        failures.append("colmap: not on PATH")
+    # COLMAP is opt-in (--engine colmap). On machines without CUDA its dense MVS
+    # is unavailable and the CPU path is coarse, so the default photo/video path
+    # is monocular depth (learned model if installed, else the paired reference).
+    if cfg.engine == "colmap":
+        if not colmap_path.available():
+            failures.append("colmap: not on PATH")
+        else:
+            try:
+                cr = colmap_path.reconstruct(photos, cfg, out / "colmap", verbose)
+                pts, s, ref, notes = scale.anchor(cr.points, cfg, reference_points)
+                candidates.append(Reconstruction(
+                    points=pts, tier=tier,
+                    path_chosen=f"colmap:{cr.dense}",
+                    scale_reference=ref, scale_factor=s, conf=cr.conf,
+                    notes={**notes, "registered": cr.n_registered, "images": cr.n_images,
+                           "points_raw": cr.n_points, "camera_centres": cr.centres,
+                           "up_hint": cr.up_hint}))
+            except Exception as exc:
+                failures.append(f"colmap: {exc}")
+                if verbose:
+                    print(f"[colmap] failed: {exc}")
 
     if cfg.engine in ("auto", "monodepth"):
         try:
@@ -174,7 +176,7 @@ def _geometry_and_export(pts: np.ndarray, capture_id: str, tier: str, out: Path,
                          above_points: np.ndarray | None = None,
                          up_hint: np.ndarray | None = None) -> dict:
     pts = np.asarray(pts, dtype=np.float64)
-    if cfg.auto_up and len(pts) > 1000:
+    if cfg.auto_up and len(pts) > 1000 and not recon.notes.get("prealigned"):
         if tier == "lidar":
             up = align.estimate_up(pts, cfg, above_points=above_points)
             apply = 0.5 < up[2] < 1.0 - 1e-4   # gravity-aligned: modest tilt only

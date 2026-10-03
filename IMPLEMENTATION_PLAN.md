@@ -478,5 +478,26 @@ folder of 2–8 images → photos; single .mp4/.mov → video).
 - Drift ablation table (correction ON vs OFF); LiDAR correction is a capped
   (≤5 cm) loop-closure blend — ARKit VIO poses are already metric.
 
-**Next (P2→P3):** photos/video tiers; damage/scope; reports, compliance matrix,
-head-to-head, capture protocol, fix-loop bundle.
+**P2 — photos + video tiers: DONE.**
+- `ingest/photos.py`, `ingest/video.py` (ffmpeg keyframes; EXIF focal length).
+- `fusion/colmap_path.py`: COLMAP SfM (CPU/SIFT flags auto-probed for COLMAP
+  3.x and 4.x), largest sub-model selected; dense MVS when CUDA is present, else
+  the CPU plane-sweep MVS in `fusion/mvs.py`. The COLMAP workspace is kept on
+  disk so runs are reproducible.
+- `fusion/monodepth.py`: backend registry — Depth Anything V2 when torch +
+  transformers are installed, else the documented cross-tier reference capture;
+  raises with guidance rather than fabricating geometry.
+- `fusion/scale.py`: metric anchoring (paired capture via similarity ICP, or a
+  known length) with an explicit non-metric `none_prior` fallback and widened
+  intervals; `fusion/arbiter.py` scores candidates and records the winner.
+- All three tiers share one geometry/confidence/export tail; `results.json`
+  gained a `scale` block (schema updated). CLI: `--engine`, `--scale-ref`,
+  `--scale-ref-kind`, `--reference-capture`, `--fps`.
+- **Known limitation:** with no CUDA (macOS) COLMAP cannot run dense MVS, so
+  photo/video geometry rests on the CPU plane-sweep MVS and is coarse —
+  intervals widen and `ceiling.observed` is often false. A learned monocular
+  model (`scripts/fetch_weights.sh`) or a paired LiDAR capture is the honest
+  accuracy lever on this hardware.
+
+**Next (P3):** damage/scope; reports, compliance matrix, head-to-head, capture
+protocol, fix-loop bundle.

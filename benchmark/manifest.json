@@ -2,9 +2,23 @@
   "units": "meters",
   "captures": [
     {
-      "id": "2026-10-03--00-39-56",
+      "id": "lidar",
       "path": "captures/2026-10-03--00-39-56",
       "tier": "lidar",
+      "room_id": "room1",
+      "ground_truth": "ground_truth/2026-10-03--00-39-56.json"
+    },
+    {
+      "id": "photos",
+      "path": "captures/photos_2026-10-03--00-39-56",
+      "tier": "photos",
+      "room_id": "room1",
+      "ground_truth": "ground_truth/2026-10-03--00-39-56.json"
+    },
+    {
+      "id": "video",
+      "path": "captures/2026-10-03--00-39-56/rgb.mp4",
+      "tier": "video",
       "room_id": "room1",
       "ground_truth": "ground_truth/2026-10-03--00-39-56.json"
     }

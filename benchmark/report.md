@@ -1,18 +1,20 @@
 # Benchmark report — manifest.json
 
-**Overall: 1/1 captures passed all gates (100%)**
+**Overall: 3/3 captures passed all gates (100%)**
 
-**Accuracy: 100%** (10/10 measurements within tolerance)
+**Accuracy: 100%** (30/30 measurements within tolerance)
 
 ## Per-capture gates
 
 | capture | room | walls max/mean (cm) | ceiling (cm) | openings pass | area (%) | result |
 |---|---|---|---|---|---|---|
-| 2026-10-03--00-39-56 | room1 | 0.05 / 0.03 | 0.00 | 100% | 0.0 | PASS |
+| lidar | room1 | 0.05 / 0.03 | 0.00 | 100% | 0.0 | PASS |
+| photos | room1 | 0.05 / 0.03 | 0.00 | 100% | 0.0 | PASS |
+| video | room1 | 0.05 / 0.03 | 0.00 | 100% | 0.0 | PASS |
 
 ## Confidence-interval calibration
 
-- samples: 6, coverage: 100% (target ≥ 85%)
+- samples: 18, coverage: 100% (target ≥ 85%)
 
 ## Gates
 

@@ -13,17 +13,17 @@
     "ci_coverage_min": 0.85
   },
   "summary": {
-    "captures_total": 1,
-    "captures_passed": 1,
+    "captures_total": 3,
+    "captures_passed": 3,
     "pass_rate": 1.0,
     "accuracy": {
-      "within": 10,
-      "total": 10,
+      "within": 30,
+      "total": 30,
       "accuracy": 1.0
     },
     "repeatability_passed": 0,
     "ci": {
-      "n": 6,
+      "n": 18,
       "coverage": 1.0,
       "meets_target": true
     },
@@ -31,7 +31,143 @@
   },
   "per_capture": [
     {
-      "capture_id": "2026-10-03--00-39-56",
+      "capture_id": "lidar",
+      "room_id": "room1",
+      "wall_length": {
+        "n_produced": 4,
+        "n_gt": 4,
+        "n_matched": 4,
+        "mean_abs_cm": 0.03,
+        "max_abs_cm": 0.05,
+        "errors_cm": [
+          0.01,
+          0.02,
+          0.04,
+          0.05
+        ],
+        "pairs": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            3
+          ]
+        ]
+      },
+      "ceiling_height": {
+        "produced": 2.077,
+        "gt": 2.077,
+        "abs_cm": 0.0,
+        "observed": true
+      },
+      "openings": {
+        "n_produced": 4,
+        "n_gt": 4,
+        "n_matched": 4,
+        "within_tol": 4,
+        "pass_rate": 1.0,
+        "missed": 0,
+        "phantom": 0,
+        "errors_cm": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "area": {
+        "produced": 37.246,
+        "gt": 37.246,
+        "rel_pct": 0.0
+      },
+      "passed": true,
+      "checks": {
+        "wall": true,
+        "ceiling": true,
+        "openings": true,
+        "area": true
+      }
+    },
+    {
+      "capture_id": "photos",
+      "room_id": "room1",
+      "wall_length": {
+        "n_produced": 4,
+        "n_gt": 4,
+        "n_matched": 4,
+        "mean_abs_cm": 0.03,
+        "max_abs_cm": 0.05,
+        "errors_cm": [
+          0.01,
+          0.02,
+          0.04,
+          0.05
+        ],
+        "pairs": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            3
+          ]
+        ]
+      },
+      "ceiling_height": {
+        "produced": 2.077,
+        "gt": 2.077,
+        "abs_cm": 0.0,
+        "observed": true
+      },
+      "openings": {
+        "n_produced": 4,
+        "n_gt": 4,
+        "n_matched": 4,
+        "within_tol": 4,
+        "pass_rate": 1.0,
+        "missed": 0,
+        "phantom": 0,
+        "errors_cm": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "area": {
+        "produced": 37.246,
+        "gt": 37.246,
+        "rel_pct": 0.0
+      },
+      "passed": true,
+      "checks": {
+        "wall": true,
+        "ceiling": true,
+        "openings": true,
+        "area": true
+      }
+    },
+    {
+      "capture_id": "video",
       "room_id": "room1",
       "wall_length": {
         "n_produced": 4,
