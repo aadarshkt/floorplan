@@ -65,6 +65,8 @@ is what makes them comparable and keeps `results.json` identical in shape.
 
 ## LiDAR tier — run, inspect, benchmark
 
+New capture? See [`NEXT_STEPS.md`](NEXT_STEPS.md) for the full checklist: run it, where the output goes, scoring, and what's next.
+
 ```bash
 # 1. run a Record3D capture (.r3d straight from the app's "Shareable/Internal" export)
 ./.venv/bin/floorplan run benchmark/benchmark_2.r3d --out benchmark/runs/lidar/benchmark_2
