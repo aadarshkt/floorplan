@@ -1,0 +1,25 @@
+{
+  "units": "meters",
+  "captures": [
+    {
+      "id": "bedroom_video",
+      "path": "captures/bedroom.mp4",
+      "tier": "video",
+      "room_id": "r1",
+      "ground_truth": "ground_truth/bedroom.json"
+    },
+    {
+      "id": "room_rgb_video",
+      "path": "captures/room_rgb.mp4",
+      "tier": "video",
+      "room_id": "r1",
+      "ground_truth": "ground_truth/bedroom.json"
+    }
+  ],
+  "repeatability": [
+    {
+      "room_id": "r1",
+      "captures": ["bedroom_video", "room_rgb_video"]
+    }
+  ]
+}

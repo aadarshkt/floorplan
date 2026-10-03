@@ -1,0 +1,7 @@
+{
+  "room_id": "r1",
+  "ceiling_height_m": 2.8,
+  "floor_area_m2": 13.44,
+  "wall_lengths_m": [4.2, 3.2, 4.2, 3.2],
+  "openings": []
+}

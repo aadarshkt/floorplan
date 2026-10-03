@@ -235,23 +235,31 @@ def _geometry_and_export(pts: np.ndarray, capture_id: str, tier: str, out: Path,
     walls = walls_mod.vectorize(vplanes, floor_z, cfg)
     walls = walls_mod.merge_double_walls(walls, cfg)
     walls = walls_mod.snap_orthogonal(walls, cfg)
-    for w in walls:
-        w.openings = openings_mod.detect(w.start, w.end, w.points, floor_z, cfg)
-    timings["geometry"] = time.time() - t0
-
-    t0 = time.time()
-    wall_ci: dict[int, list[float]] = {}
-    for w in walls:
-        bp = w.band_points if w.band_points is not None and len(w.band_points) >= 30 else w.points
-        ci = confidence.bootstrap_length(bp, cfg)
-        if ci is not None:
-            wall_ci[w.id] = ci
-
     rooms = multiroom.extract_rooms(walls, floor_z, ceil_z, observed,
                                     floor_pts, ceil_pts, cfg)
     if not rooms:
         rooms = [room_mod.assemble(walls, floor_z, ceil_z, observed,
                                    floor_pts, ceil_pts, pts, cfg)]
+    # A noisy monocular cloud fragments into many near-parallel sheets, so a
+    # single room can arrive with a dozen spurious walls and an 18-vertex
+    # polygon. When that happens, rebuild the room from the floor footprint: a
+    # stable closed outline with a small, consistent wall set.
+    if len(rooms) == 1 and len(rooms[0].walls) > cfg.max_room_walls:
+        outline = room_mod.footprint_outline(floor_pts, cfg)
+        if outline is not None and len(outline) >= 3:
+            owalls = walls_mod.from_outline(outline, pts, floor_z, cfg)
+            rooms = [room_mod.assemble_outline(outline, owalls, floor_z, ceil_z,
+                                               observed, floor_pts, ceil_pts, cfg)]
+    timings["geometry"] = time.time() - t0
+
+    t0 = time.time()
+    wall_ci: dict[int, list[float]] = {}
+    for w in (w for r in rooms for w in r.walls):
+        w.openings = openings_mod.detect(w.start, w.end, w.points, floor_z, cfg)
+        bp = w.band_points if w.band_points is not None and len(w.band_points) >= 30 else w.points
+        ci = confidence.bootstrap_length(bp, cfg)
+        if ci is not None:
+            wall_ci[w.id] = ci
     adjacency = multiroom.adjacency(rooms) if len(rooms) > 1 else []
     prop = room_mod.property_area(floor_pts, cfg)
     timings["confidence"] = time.time() - t0

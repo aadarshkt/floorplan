@@ -45,6 +45,18 @@ class Settings:
     min_room_area: float = 2.0
     max_room_area: float = 120.0
 
+    # ── single-room regularisation (noisy photo/video clouds) ─────────────────
+    # A noisy monocular cloud peels into many spurious vertical sheets, so a
+    # single room can come back with a dozen walls. Above this wall count the
+    # room outline is rebuilt from the floor footprint instead of the sheet network.
+    max_room_walls: int = 4
+    ceiling_min_m: float = 1.8         # plausible occupied ceiling height range
+    ceiling_max_m: float = 3.6
+    ceiling_plane_min_frac: float = 0.10  # a ceiling plane needs this share of the floor plane's points
+    wall_outline_band_m: float = 0.40  # cloud points this close to an outline edge belong to it
+    outline_simplify_m: float = 0.25   # collar tolerance when simplifying the footprint hull
+    outline_max_rect_ratio: float = 1.35  # reject a rectangle that over-covers the observed floor by more
+
     # ── drift correction ─────────────────────────────────────────────────────
     drift_correction: bool = True
     auto_up: bool = True               # rotate cloud so estimated gravity = +Z

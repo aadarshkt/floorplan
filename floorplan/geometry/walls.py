@@ -71,6 +71,43 @@ def vectorize(vertical_planes: list[Plane], floor_z: float, cfg: Settings) -> li
     return walls
 
 
+def from_outline(outline: np.ndarray, points: np.ndarray, floor_z: float,
+                 cfg: Settings) -> list[Wall]:
+    """Turn a closed room outline into walls, attaching nearby cloud points.
+
+    Used for noisy photo/video clouds whose vertical structure RANSAC fragments
+    into many parallel sheets: the outline (from the observed floor footprint)
+    gives a small closed set of walls instead of a dozen spurious segments. Each
+    wall carries the cloud points near its face so opening detection still works.
+    """
+    pts = np.asarray(points, dtype=np.float64)
+    poly = np.asarray(outline, dtype=np.float64)
+    out: list[Wall] = []
+    n = len(poly)
+    for i in range(n):
+        a, b = poly[i], poly[(i + 1) % n]
+        vec = b - a
+        length = float(np.linalg.norm(vec))
+        if length < 1e-6:
+            continue
+        u = vec / length
+        nrm = np.array([-u[1], u[0]])
+        rel = pts[:, :2] - a
+        along = rel @ u
+        perp = rel @ nrm
+        mask = ((along >= -0.1) & (along <= length + 0.1)
+                & (np.abs(perp) <= cfg.wall_outline_band_m))
+        wpts = pts[mask]
+        band = wpts[(wpts[:, 2] >= floor_z + cfg.wall_band_low) &
+                    (wpts[:, 2] <= floor_z + cfg.wall_band_high)]
+        out.append(Wall(
+            id=len(out), start=a.copy(), end=b.copy(), normal=nrm, length=length,
+            plane_id=-1, points=wpts, angle=math.atan2(u[1], u[0]) % math.pi,
+            band_points=band if len(band) >= 30 else wpts,
+        ))
+    return out
+
+
 def merge_double_walls(walls: list[Wall], cfg: Settings) -> list[Wall]:
     """Merge near-parallel, near-coincident segments (the two faces of one wall)."""
     if not walls:
