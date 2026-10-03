@@ -75,7 +75,21 @@ class Settings:
     layout_multi_room: bool = True    # every camera-visited free-space component is a room
 
     # ── drift correction ─────────────────────────────────────────────────────
-    drift_correction: bool = False     # old proximity loop-blend: no verified constraint, off
+    drift_correction: bool = True      # keyframe pose graph with ICP-verified loops (drift.py)
+    pg_max_keyframes: int = 120        # keyframes in the pose graph
+    pg_voxel_m: float = 0.05           # keyframe cloud voxel for ICP
+    pg_min_gap_kf: int = 10            # a revisit is at least this many keyframes later
+    pg_min_travel_m: float = 3.0       # ...and after at least this much walking
+    pg_loop_radius_m: float = 1.5      # candidate: camera centres this close
+    pg_min_view_dot: float = 0.3       # candidate: viewing directions this aligned
+    pg_max_candidates: int = 80
+    pg_icp_dist_m: float = 0.10        # ICP correspondence distance (fine stage)
+    pg_min_fitness: float = 0.45       # ICP overlap needed to accept a loop
+    pg_max_rmse_m: float = 0.04
+    pg_max_jump_m: float = 0.6         # ICP may not move the odometry guess further than this
+    pg_max_rot_deg: float = 15.0
+    pg_prune_threshold: float = 0.25   # line-process pruning of uncertain loop edges
+    pg_max_correction_m: float = 1.5   # reject a graph that relocates any keyframe more than this
     auto_up: bool = True               # rotate cloud so estimated gravity = +Z
 
     # ── openings ─────────────────────────────────────────────────────────────

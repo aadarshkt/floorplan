@@ -43,6 +43,23 @@ Things to check: does every red outline sit on the black wall evidence? Are the
 doors you walked through present? Is the ceiling `observed: true`? If not,
 sweep the ceiling next time.
 
+### Drift correction: on vs off
+
+LiDAR runs correct VIO drift by default (`floorplan/drift.py`: keyframe pose graph,
+loops verified by ICP). Without a verified revisit (short single-room scans) the
+correction is the identity and `results.json -> drift` says so.
+
+```bash
+floorplan run <capture> --out runs/on                           # correction ON (default)
+floorplan run <capture> --out runs/off --no-drift-correction    # poses used as-is
+floorplan drift-ablate <capture> --out runs/ablation            # both, plus table + overlay
+open runs/ablation/drift_overlay.svg                            # blue = on, red dashed = off
+```
+
+`drift-ablate` writes `drift_ablation.md/json` (footprint, bbox, wall length, loop
+error before/after). Whether correction improves *accuracy* needs laser truth:
+`floorplan bench --ablate-drift`.
+
 ### Scoring it against laser measurements
 
 ```bash

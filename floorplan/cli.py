@@ -74,7 +74,7 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--max-frames", type=int, default=None,
                    help="cap on fused depth frames (default 500)")
     r.add_argument("--no-drift-correction", action="store_true",
-                   help="use poses as-is (for the drift on/off ablation)")
+                   help="use poses as-is, no drift correction (compare with a default run)")
     r.add_argument("--quiet", action="store_true")
 
     b = sub.add_parser("bench", help="run the benchmark manifest and score gates")
@@ -106,6 +106,15 @@ def main(argv: list[str] | None = None) -> int:
     _add_recon_flags(x)
     x.add_argument("--quiet", action="store_true")
 
+    d = sub.add_parser("drift-ablate", help="run one LiDAR capture with drift correction ON and "
+                                            "OFF and compare the stitched footprints")
+    d.add_argument("input", help="Record3D export (.r3d / folder / zip)")
+    d.add_argument("--out", required=True, help="report directory (on/, off/, drift_ablation.*)")
+    _add_recon_flags(d)
+    d.add_argument("--conf-min", type=int, default=None)
+    d.add_argument("--max-frames", type=int, default=None)
+    d.add_argument("--quiet", action="store_true")
+
     g = sub.add_parser("gt-template", help="write a ground-truth file to fill in, listing every "
                                            "wall and opening of a finished run")
     g.add_argument("run_dir", help="output directory of `floorplan run`")
@@ -124,6 +133,15 @@ def main(argv: list[str] | None = None) -> int:
             print(f"wrote {args.out}: fill every null with your measurement (metres)")
         else:
             print(txt)
+        return 0
+
+    if args.cmd == "drift-ablate":
+        from floorplan import driftcmp
+        try:
+            driftcmp.run(args.input, args.out, _settings_from_args(args), verbose=not args.quiet)
+        except Exception as exc:
+            print(f"error: {type(exc).__name__}: {exc}", file=sys.stderr)
+            return 1
         return 0
 
     if args.cmd == "run":
