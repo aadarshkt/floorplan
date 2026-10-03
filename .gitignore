@@ -8,3 +8,4 @@ benchmark_data/
 *.egg-info/
 .pytest_cache/
 floorplan_cache/
+*.ply
