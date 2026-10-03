@@ -51,6 +51,7 @@ class Record3DCapture:
     pose_convention: str | None = None    # known convention (.r3d: c2w_gl); None = auto-detect
     pose_selection: dict = field(default_factory=dict)  # how the convention was chosen (provenance)
     frame_ids: np.ndarray | None = None   # odometry frame number per entry (= rgb frame index)
+    world_corr: np.ndarray | None = None  # (N, 4, 4) drift correction in the canonical Z-up world
 
     @property
     def n_frames(self) -> int:

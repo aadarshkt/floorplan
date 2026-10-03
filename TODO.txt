@@ -1,0 +1,19 @@
+TODO
+
+Repeatability (gate: same room, same tier, same plan within 1 cm or 0.5 % per wall)
+- The same capture gives different plans on repeated runs. c7d28f72c6 with drift
+  correction ON: footprint 46.20 m2 (first run) vs 46.60 m2 (second run), ~0.9 %.
+  Cause not traced. Suspects: drift.py (Open3D ICP / pose-graph threading, keyframe
+  clouds), random steps in fusion (statistical outlier removal, voxel order), the
+  bootstrap CIs (seed?). Check whether drift correction OFF is also non-deterministic.
+- Fix: seed every RNG, make results bit-stable for the same input, then add a test that
+  runs one capture twice and compares walls.
+- Then capture a real room twice at the same tier (benchmark/manifest "repeatability").
+
+Drift correction
+- benchmark_2 revisits its start (ends 0.74 m from it) but ICP fitness is only
+  0.06-0.16 (partial overlap) vs the 0.45 threshold, so no loop is accepted. Several
+  pairs agree on a ~14-23 cm shift. Relax the fitness test and require neighbouring
+  pairs to agree instead.
+- 1a8384c3f6: correction changes the room count 4 -> 3; check against the real layout.
+- Measure accuracy gain with laser truth: floorplan bench --ablate-drift.

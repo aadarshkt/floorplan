@@ -97,7 +97,11 @@ def camera_centres(capture, convention: str) -> np.ndarray:
         R = quat_to_matrix(capture.quat[i])
         t = capture.pos[i]
         out[i] = -R.T @ t if convention == "w2c" else t
-    return np.stack([out[:, 0], -out[:, 2], out[:, 1]], axis=1)
+    c = np.stack([out[:, 0], -out[:, 2], out[:, 1]], axis=1)
+    corr = getattr(capture, "world_corr", None)
+    if corr is not None:
+        c = np.einsum("nij,nj->ni", corr[:, :3, :3], c) + corr[:, :3, 3]
+    return c
 
 
 def _accumulate(capture, cfg: Settings, idxs, intr, convention: str, px_stride: int) -> np.ndarray:
@@ -112,7 +116,11 @@ def _accumulate(capture, cfg: Settings, idxs, intr, convention: str, px_stride: 
                            cfg.depth_edge_rel)
         if len(pc) == 0:
             continue
-        chunks.append(_to_world(pc, quat_to_matrix(capture.quat[i]), capture.pos[i], convention))
+        world = _to_world(pc, quat_to_matrix(capture.quat[i]), capture.pos[i], convention)
+        corr = getattr(capture, "world_corr", None)
+        if corr is not None:
+            world = world @ corr[i, :3, :3].T + corr[i, :3, 3]
+        chunks.append(world)
     return np.concatenate(chunks, axis=0) if chunks else np.zeros((0, 3))
 
 
@@ -145,7 +153,8 @@ def camera_to_world(capture, index: int, convention: str) -> np.ndarray:
     to_z = np.array([[1.0, 0.0, 0.0], [0.0, 0.0, -1.0], [0.0, 1.0, 0.0]])
     pose = np.eye(4)
     pose[:3, :3], pose[:3, 3] = to_z @ R, to_z @ t
-    return pose
+    corr = getattr(capture, "world_corr", None)
+    return corr[index] @ pose if corr is not None else pose
 
 
 def _read_depth(capture, index: int, cfg: Settings) -> np.ndarray:

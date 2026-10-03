@@ -36,7 +36,7 @@ Requirement → where it lives → artifact → status. Status is honest:
 | Opening widths ≤2 cm on ≥85 %, missed + phantom count | `floorplan bench` (`eval/metrics.py` opening_errors) | scoring done; accuracy unmeasured (needs laser truth) |
 | Ceiling ≤1.5 cm, repeat spread ≤1 cm | `bench` + repeatability block | scoring done; needs a room captured twice |
 | Repeatability 1 cm / 0.5 % per wall | `bench` repeatability | todo: capture a room twice |
-| Drift accountability + on/off ablation | `drift.py`, `bench --ablate-drift` | todo: real pose-graph correction + footprint ablation |
+| Drift accountability + on/off ablation | `drift.py` (pose graph, ICP-verified loops), `floorplan drift-ablate`, `bench --ablate-drift` | LiDAR tier done; ablation run on c7d28f72c6 (13 loops, median loop error 25 cm -> 2 cm, footprint -0.27 %); needs laser truth to show accuracy gain |
 | Photo-tier whole-property stitch | — | todo |
 | Video ±3 % / photos ±8 % with calibrated intervals | `floorplan xbench` (vs LiDAR), `bench` (vs laser) | partial |
 

@@ -32,8 +32,7 @@ from floorplan.ingest import detect, record3d
 from floorplan.ingest import photos as photos_mod
 from floorplan.ingest import video as video_mod
 
-_NO_DRIFT = {"method": "none", "n_loops": 0, "correction_applied": False,
-             "ablation": {"on": None, "off": None}}
+_NO_DRIFT = drift_mod.NO_DRIFT
 
 
 def run(capture_path: str | Path, out_dir: str | Path, cfg: Settings | None = None,
@@ -58,20 +57,15 @@ def _run_lidar(capture_path: str | Path, out: Path, cfg: Settings, verbose: bool
     cap = record3d.load(capture_path)
     timings["ingest"] = time.time() - t0
 
-    # The old position-proximity "loop closure" nudged poses by <= 5 cm without
-    # any verified constraint; it is off by default and reported honestly.
-    drift_info = {**_NO_DRIFT, "method": "none (ARKit VIO poses, no verified loop constraint)"}
-    if cfg.drift_correction:
-        loops = drift_mod.detect_loops(cap.pos)
-        if loops:
-            cap.pos, applied = drift_mod.correct_positions(cap.pos, loops)
-            drift_info = {"method": "loop_closure_linear", "n_loops": len(loops),
-                          "correction_applied": bool(applied),
-                          "ablation": {"on": None, "off": None}}
-    timings["drift"] = 0.0
-
     t0 = time.time()
     convention = depth_fusion.detect_pose_convention(cap, cfg)
+    t1 = time.time()
+    if cfg.drift_correction:
+        drift_info = drift_mod.correct(cap, cfg, convention, verbose=verbose)
+    else:
+        drift_info = {**drift_mod.NO_DRIFT, "method": "none (poses used as-is)"}
+    timings["drift"] = time.time() - t1
+    t0 = time.time()
     mesh_path = out / "scan_mesh.ply" if cfg.lidar_fusion == "tsdf" else None
     pcd = depth_fusion.fuse(cap, cfg, verbose=verbose, convention=convention, mesh_path=mesh_path)
     timings["fusion"] = time.time() - t0
