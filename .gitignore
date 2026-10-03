@@ -13,3 +13,9 @@ floorplan_cache/
 benchmark/captures/
 benchmark/runs/
 benchmark/reports/*/runs/
+# generated benchmark outputs and raw captures (publish final results later)
+*.r3d
+benchmark/reports/debug/
+benchmark/reports/lidar/
+benchmark/reports/xbench_*/
+benchmark/reports/depth_probe.jsonl

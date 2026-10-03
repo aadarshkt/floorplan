@@ -1,0 +1,10 @@
+{
+  "_note": "Record3D exports. xbench runs the LiDAR tier on each export and the video tier on its rgb.mp4 alone, then scores video against LiDAR.",
+  "captures": [
+    {"id": "c00a170fe1", "path": "../../assignment/Assignment/c00a170fe1"},
+    {"id": "1a8384c3f6", "path": "../../assignment/Assignment/1a8384c3f6"},
+    {"id": "c7d28f72c6", "path": "../../assignment/Assignment/c7d28f72c6"},
+    {"id": "benchmark_1", "path": "captures/benchmark_1"},
+    {"id": "benchmark_2", "path": "captures/benchmark_2"}
+  ]
+}

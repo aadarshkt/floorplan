@@ -60,16 +60,23 @@ def _density_floor_ceiling(points: np.ndarray, cfg: Settings) -> tuple[float, fl
     return floor_z, ceil_z, observed
 
 
-def floor_and_ceiling(planes: list, points: np.ndarray, cfg: Settings
+def floor_and_ceiling(planes: list, points: np.ndarray, cfg: Settings,
+                      cam_z: float | None = None
                       ) -> tuple[float, float, bool, np.ndarray, np.ndarray]:
     floor_z, ceil_z, observed = _density_floor_ceiling(points, cfg)
+    if cam_z is not None:
+        # A handheld phone is 1.0-1.8 m above the floor: the floor is the densest
+        # horizontal layer at least 0.9 m below the cameras (not a bed or table).
+        fz = _floor_below(points, cam_z, cfg)
+        if fz is not None:
+            floor_z = fz
 
     # With a noisy cloud the densest upper band is often a bed/wardrobe top, not
     # the ceiling. A horizontal RANSAC plane is a stronger witness: prefer the
     # highest sizable plane that sits at a plausible occupied height above the
     # floor. If there is none, the ceiling was never observed — say so honestly
     # rather than presenting a spurious dense band as the ceiling.
-    ceil_plane = _ceil_from_planes(planes, floor_z, cfg) if planes else None
+    ceil_plane = _ceil_from_planes(planes, floor_z, cfg, cam_z) if planes else None
     if ceil_plane is not None:
         ceil_z, observed = ceil_plane, True
     else:
@@ -86,7 +93,62 @@ def floor_and_ceiling(planes: list, points: np.ndarray, cfg: Settings
     return floor_z, ceil_z, observed, floor_pts, ceil_pts
 
 
-def _ceil_from_planes(planes: list, floor_z: float, cfg: Settings) -> float | None:
+def room_ceiling(points: np.ndarray, polygon: np.ndarray, floor_z: float,
+                 cam_z: float | None, cfg: Settings
+                 ) -> tuple[float, bool, np.ndarray] | None:
+    """Ceiling of one room: the dense top layer of points inside its polygon.
+
+    Points 0.25 m inside the walls (no wall-top clutter), above the cameras,
+    within the plausible height range; the highest layer holding >= 30 % of the
+    strongest layer's points. Returns (ceil_z, observed, ceiling points).
+    """
+    poly = np.asarray(polygon, dtype=float)
+    c = poly.mean(axis=0)
+    k = np.clip(1 - 0.25 / np.maximum(np.linalg.norm(poly - c, axis=1), 1e-6), 0.5, 1)
+    shrunk = c + (poly - c) * k[:, None]
+    z = points[:, 2]
+    lo = max(floor_z + cfg.ceiling_min_m, (cam_z + 0.2) if cam_z is not None else -np.inf)
+    cand = points[(z >= lo) & (z <= floor_z + cfg.ceiling_max_m + 0.9)]
+    if len(cand) < 200:
+        return None
+    cand = cand[point_in_polygon(cand[:, :2], shrunk)]
+    if len(cand) < 200:
+        return None
+    zc = cand[:, 2]
+    hist, edges = np.histogram(zc, bins=np.arange(zc.min(), zc.max() + 0.02, 0.02))
+    if len(hist) == 0 or hist.max() < 50:
+        return None
+    strong = np.nonzero(hist >= 0.3 * hist.max())[0]
+    i = int(strong.max())
+    cz = float((edges[i] + edges[i + 1]) / 2)
+    layer = cand[np.abs(zc - cz) <= 0.04]
+    # observed only if the layer covers a real part of the room, not a shelf top
+    from scipy.spatial import ConvexHull
+    try:
+        cover = ConvexHull(layer[:, :2]).volume / max(shoelace(poly), 1e-6)
+    except Exception:
+        cover = 0.0
+    if cover < 0.25:
+        return None
+    return float(np.median(layer[:, 2])), True, layer
+
+
+def _floor_below(points: np.ndarray, cam_z: float, cfg: Settings) -> float | None:
+    z = points[:, 2]
+    zl = z[(z < cam_z - 0.9) & (z > cam_z - 2.2)]
+    if len(zl) < 200:
+        return None
+    hist, edges = np.histogram(zl, bins=np.arange(zl.min(), zl.max() + 0.02, 0.02))
+    if len(hist) == 0:
+        return None
+    # lowest strong peak: within 40 % of the strongest, take the lowest
+    strong = np.nonzero(hist >= 0.4 * hist.max())[0]
+    i = int(strong.min())
+    return float((edges[i] + edges[i + 1]) / 2)
+
+
+def _ceil_from_planes(planes: list, floor_z: float, cfg: Settings,
+                      cam_z: float | None = None) -> float | None:
     """Highest sizable horizontal plane at a plausible ceiling height, else None."""
     hor = [p for p in planes if p.kind == "horizontal"]
     if not hor:
@@ -94,7 +156,8 @@ def _ceil_from_planes(planes: list, floor_z: float, cfg: Settings) -> float | No
     biggest = max(len(p.points) for p in hor)
     cands = [p.z_median for p in hor
              if len(p.points) >= cfg.ceiling_plane_min_frac * biggest
-             and cfg.ceiling_min_m <= p.z_median - floor_z <= cfg.ceiling_max_m]
+             and cfg.ceiling_min_m <= p.z_median - floor_z <= cfg.ceiling_max_m
+             and (cam_z is None or p.z_median > cam_z + 0.2)]
     return max(cands) if cands else None
 
 
@@ -169,7 +232,21 @@ def ceiling_height(floor_z: float, ceil_z: float, observed: bool,
     return Measurement(round(height, 3), confidence.interval(height, ci, cfg.ci_floor_height_m), method)
 
 
-def property_area(floor_pts: np.ndarray, cfg: Settings) -> Measurement:
+def property_area(floor_pts: np.ndarray, cfg: Settings,
+                  rooms: list[Room] | None = None) -> Measurement:
+    """Footprint = sum of the room polygons (from the lidar-optimized branch).
+
+    A convex hull of floor points fills L-corners and counts floor seen through
+    doorways (e.g. 33.9 m2 for a 16.5 m2 room). Falls back to the hull only when
+    no room polygon exists.
+    """
+    polys = [np.asarray(r.polygon) for r in (rooms or []) if len(r.polygon) >= 3]
+    if polys:
+        value = float(sum(shoelace(p) for p in polys))
+        err = float(sum(max(r.floor_area_m2.value - r.floor_area_m2.ci95[0],
+                            r.floor_area_m2.ci95[1] - r.floor_area_m2.value) for r in rooms))
+        return Measurement(round(value, 3), [round(max(0.0, value - err), 4),
+                                             round(value + err, 4)], "sum_of_room_polygons")
     from scipy.spatial import ConvexHull
     if len(floor_pts) < 10:
         return Measurement(0.0, [0.0, 0.0], "none")
@@ -180,7 +257,7 @@ def property_area(floor_pts: np.ndarray, cfg: Settings) -> Measurement:
     ci = confidence.bootstrap_hull_area(floor_pts[:, :2], cfg) or [value * 0.97, value * 1.03]
     return Measurement(round(value, 3),
                        confidence.interval(value, ci, cfg.ci_floor_area_rel * value),
-                       "bootstrap_hull")
+                       "convex_hull_fallback")
 
 
 def _rdp(points: np.ndarray, tol: float) -> np.ndarray:
@@ -288,11 +365,13 @@ def assemble_outline(outline: np.ndarray, walls: list[Wall], floor_z: float, cei
     """Build a room whose polygon and area come from the floor outline."""
     poly = np.asarray(outline, dtype=np.float64)
     area_val = shoelace(poly)
-    area_ci = (confidence.bootstrap_hull_area(floor_pts[:, :2], cfg)
-               if len(floor_pts) >= 10 else None)
-    if area_ci is None:
-        area_ci = [round(area_val * 0.97, 3), round(area_val * 1.03, 3)]
-    area_ci = confidence.interval(area_val, area_ci, cfg.ci_floor_area_rel * area_val)
+    # area follows the walls: moving every wall by d changes it by ~ perimeter * d
+    perim = float(np.sum(np.linalg.norm(np.roll(poly, -1, axis=0) - poly, axis=1)))
+    walls_sigma = [w.length_sigma for w in walls if w.length_sigma is not None]
+    d = (float(np.median(walls_sigma)) / np.sqrt(2) if walls_sigma else 0.01)
+    half = 1.96 * perim * d / 2
+    area_ci = confidence.interval(area_val, [area_val - half, area_val + half],
+                                  cfg.ci_floor_area_rel * area_val)
     return Room(
         polygon=[[round(float(x), 3), round(float(y), 3)] for x, y in poly],
         floor_area_m2=Measurement(round(area_val, 3), area_ci, "footprint_outline"),

@@ -11,7 +11,7 @@ VIDEO_EXT = {".mp4", ".mov", ".m4v", ".avi"}
 def detect_tier(path: str | Path) -> str:
     """Return one of 'lidar', 'photos', 'video'.
 
-    lidar  : Record3D export (folder or ZIP containing odometry.csv)
+    lidar  : Record3D .r3d file, or an export folder / ZIP containing odometry.csv
     photos : a folder of still images
     video  : a single video file
     """
@@ -20,6 +20,8 @@ def detect_tier(path: str | Path) -> str:
         raise FileNotFoundError(p)
 
     if p.is_file():
+        if p.suffix.lower() == ".r3d":
+            return "lidar"
         if p.suffix.lower() == ".zip":
             with zipfile.ZipFile(p) as z:
                 names = z.namelist()

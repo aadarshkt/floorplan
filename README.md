@@ -13,7 +13,7 @@ Local, deterministic, offline CLI. No server, no cloud.
 brew install ffmpeg colmap     # video frames; photos/video reconstruction (SfM)
 brew install libusb            # required by open3d on macOS
 uv venv --python 3.11 .venv    # or: python3.11 -m venv .venv
-uv pip install -e .            # or: ./.venv/bin/pip install -e .
+uv pip install -e .            # or: ./.venv/bin/pip install -e .   (includes lzfse for .r3d)
 
 # Optional learned monocular-depth backend for the photos/video tiers:
 scripts/fetch_weights.sh
@@ -29,7 +29,7 @@ The tier is auto-detected:
 
 | Input | Tier | Geometry source |
 |---|---|---|
-| Record3D export (folder or `.zip` with `odometry.csv`) | **lidar** | depth + pose fusion (native metres) |
+| Record3D `.r3d` file, or an export folder / `.zip` with `odometry.csv` | **lidar** | depth + pose fusion (native metres) |
 | Folder of photos | **photos** | monocular depth: a learned model if installed, else the paired reference capture (COLMAP with `--engine colmap`) |
 | Single `.mp4` / `.mov` walkthrough | **video** | ffmpeg keyframes → same as photos |
 
@@ -62,6 +62,43 @@ is what makes them comparable and keeps `results.json` identical in shape.
 ./.venv/bin/floorplan run ./photos --out benchmark/runs/photos \
     --scale-ref 2.42 --scale-ref-kind ceiling_height
 ```
+
+## LiDAR tier — run, inspect, benchmark
+
+New capture? See [`NEXT_STEPS.md`](NEXT_STEPS.md) for the full checklist: run it, where the output goes, scoring, and what's next.
+
+```bash
+# 1. run a Record3D capture (.r3d straight from the app's "Shareable/Internal" export)
+./.venv/bin/floorplan run benchmark/benchmark_2.r3d --out benchmark/runs/lidar/benchmark_2
+
+# 2. look at it
+open benchmark/runs/lidar/benchmark_2/floor_plan.svg       # plan: wall ids (w0..), lengths ±95% CI,
+                                                           # doors/windows with widths, area, ceiling
+python -m json.tool benchmark/runs/lidar/benchmark_2/results.json | less   # every number + ci95
+open -a "Preview" benchmark/runs/lidar/benchmark_2/scan_metric.ply        # or MeshLab / CloudCompare
+grep -E '"path_chosen"|"total_s"' benchmark/runs/lidar/benchmark_2/provenance.json
+./.venv/bin/python scripts/layout_debug.py benchmark/runs/lidar/benchmark_2 /tmp/layout.png && open /tmp/layout.png
+#   grey = all points, black = wall evidence, blue = camera path, red = room outline
+
+# 3. measure the room (benchmark/MEASURE.md), then score
+./.venv/bin/floorplan gt-template benchmark/runs/lidar/benchmark_2 --out benchmark/ground_truth/benchmark_2.json
+#   ...fill the nulls with laser readings...
+./.venv/bin/floorplan bench --manifest benchmark/manifest.lidar.json \
+    --out benchmark/reports/lidar --runs benchmark/runs/lidar
+cat benchmark/reports/lidar/report.md      # gates, missed/phantom walls+openings, per-wall errors
+```
+
+What the numbers mean:
+
+- wall lengths are **interior, face to face** (what a laser measures), from one
+  room outline, so walls, polygon and area always agree;
+- `ci95` combines how sharply each wall surface is defined in the scan with a
+  per-tier systematic floor (`config.py: ci_sys_length_*`);
+- an opening is reported only with evidence: a door must be *seen through*
+  (scan points beyond the wall inside the gap), so unscanned wall patches do
+  not become phantom doors;
+- `ceiling_height_m.observed=false` means the ceiling was never scanned and the
+  value is a prior with a wide interval — sweep the ceiling when capturing.
 
 ## Photos / video tier — exact commands (CPU or Apple Silicon, no NVIDIA)
 

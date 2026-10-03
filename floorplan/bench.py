@@ -48,6 +48,9 @@ def room_measurements(room: dict) -> dict:
     area = room.get("floor_area_m2") or {}
     walls = room.get("walls", [])
     return {
+        "wall_ids": [w["wall_id"] for w in walls],
+        "wall_mids": [[(w["start"][0] + w["end"][0]) / 2, (w["start"][1] + w["end"][1]) / 2]
+                      for w in walls],
         "walls": [w["length_m"]["value"] for w in walls],
         "wall_ci": [w["length_m"].get("ci95") for w in walls],
         "ceiling": ceil.get("value"),
@@ -64,10 +67,14 @@ def evaluate_capture(capture_id: str, room_id: str, result: dict,
                      gt: groundtruth.GroundTruth, gates: dict,
                      ci_samples: list) -> dict:
     m = room_measurements(_pick_room(result, room_id))
-    wl = metrics.wall_length_errors(m["walls"], gt.wall_lengths_m)
+    wl = metrics.wall_errors_with_ids(m["walls"], m["wall_ids"], gt.wall_lengths_m,
+                                      gt.wall_ids or [None] * len(gt.wall_lengths_m),
+                                      produced_mids=m["wall_mids"], gt_mids=gt.wall_mids)
 
     ceil_err = None
     ceil_pass = True
+    ceil_spread_cm = (round((max(gt.ceiling_readings) - min(gt.ceiling_readings)) * 100, 2)
+                      if len(gt.ceiling_readings) > 1 else None)
     if gt.ceiling_height_m is not None:
         if m["ceiling"] is None:
             ceil_pass = False
@@ -81,7 +88,7 @@ def evaluate_capture(capture_id: str, room_id: str, result: dict,
     wall_pass = True
     if gt.wall_lengths_m:
         wall_pass = (
-            wl["n_matched"] == len(gt.wall_lengths_m)
+            wl["missed"] == 0
             and wl["mean_abs_cm"] is not None
             and wl["mean_abs_cm"] <= gates["wall_length_abs_cm"]
             and wl["max_abs_cm"] <= gates["wall_length_max_abs_cm"]
@@ -109,7 +116,8 @@ def evaluate_capture(capture_id: str, room_id: str, result: dict,
         "room_id": room_id,
         "wall_length": wl,
         "ceiling_height": {"produced": m["ceiling"], "gt": gt.ceiling_height_m,
-                           "abs_cm": ceil_err, "observed": m["observed"]},
+                           "abs_cm": ceil_err, "observed": m["observed"],
+                           "gt_readings_spread_cm": ceil_spread_cm},
         "openings": op,
         "area": {"produced": m["area"], "gt": gt.floor_area_m2, "rel_pct": area_rel},
         "passed": passed,
@@ -164,6 +172,7 @@ def run(manifest_path: str | Path, out_dir: str | Path,
     gates = {**DEFAULT_GATES, **manifest.get("gates", {})}
 
     out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
     cache = Path(runs_dir) if runs_dir else (out / "runs")
     cache.mkdir(parents=True, exist_ok=True)
 
@@ -180,12 +189,17 @@ def run(manifest_path: str | Path, out_dir: str | Path,
             result = pipeline.run(_resolve(base, entry["path"]), cache / cid,
                                   cfg=cfg, tier=entry.get("tier"), verbose=False)
         results[cid] = result
-        gt = groundtruth.load(_resolve(base, entry["ground_truth"]),
-                              fallback_room_id=entry.get("room_id", "r1"))
-        rc = evaluate_capture(cid, entry.get("room_id", "r1"), result, gt, gates, ci_samples)
-        per_capture.append(rc)
-        if verbose:
-            print(f"[bench] {cid}: {'PASS' if rc['passed'] else 'FAIL'} {rc['checks']}")
+        gt_path = _resolve(base, entry["ground_truth"]) if entry.get("ground_truth") else None
+        if gt_path is None or not gt_path.exists():
+            if verbose:
+                print(f"[bench] {cid}: no ground truth yet ({gt_path}); run produced, not scored")
+            continue
+        for gt in groundtruth.load_rooms(_resolve(base, entry["ground_truth"]),
+                                         fallback_room_id=entry.get("room_id", "r1")):
+            rc = evaluate_capture(cid, gt.room_id, result, gt, gates, ci_samples)
+            per_capture.append(rc)
+            if verbose:
+                print(f"[bench] {cid}/{gt.room_id}: {'PASS' if rc['passed'] else 'FAIL'} {rc['checks']}")
 
     repeat: list[dict] = []
     for r in manifest.get("repeatability", []):

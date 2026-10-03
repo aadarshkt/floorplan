@@ -28,8 +28,8 @@ def to_markdown(manifest_name: str, per_capture: list[dict],
     lines.append("")
     lines.append("## Per-capture gates")
     lines.append("")
-    lines.append("| capture | room | walls max/mean (cm) | ceiling (cm) | openings pass | area (%) | result |")
-    lines.append("|---|---|---|---|---|---|---|")
+    lines.append("| capture | room | walls max/mean (cm) | walls missed/phantom | ceiling (cm) | openings pass (missed/phantom) | area (%) | result |")
+    lines.append("|---|---|---|---|---|---|---|---|")
     for c in per_capture:
         wl = c["wall_length"]
         ce = c["ceiling_height"]
@@ -38,11 +38,22 @@ def to_markdown(manifest_name: str, per_capture: list[dict],
         lines.append(
             f"| {c['capture_id']} | {c['room_id']} | "
             f"{_fmt(wl['max_abs_cm'])} / {_fmt(wl['mean_abs_cm'])} | "
+            f"{wl.get('missed', '—')}/{wl.get('phantom', '—')} | "
             f"{_fmt(ce['abs_cm'])}{'' if ce.get('observed', True) else ' (unobs)'} | "
-            f"{_fmt((op['pass_rate'] or 0)*100, '', 0)}% | "
+            f"{_fmt((op['pass_rate'] or 0)*100, '', 0)}% ({op['missed']}/{op['phantom']}) | "
             f"{_fmt(ar['rel_pct'], '', 1)} | "
             f"{'PASS' if c['passed'] else 'FAIL'} |"
         )
+    lines.append("")
+
+    lines.append("## Per-wall errors")
+    lines.append("")
+    lines.append("| capture | room | wall (plan) | measured as | error (cm) |")
+    lines.append("|---|---|---|---|---|")
+    for c in per_capture:
+        wl = c["wall_length"]
+        for (pid, gid), e in zip(wl.get("pair_ids", []), wl.get("errors_cm", [])):
+            lines.append(f"| {c['capture_id']} | {c['room_id']} | {pid} | {gid or 'by length'} | {e:.1f} |")
     lines.append("")
 
     if repeatability:

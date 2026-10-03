@@ -1,0 +1,12 @@
+{
+  "_note": "LiDAR tier benchmark. Each capture is scored against ground_truth/<id>.json (laser/tape). Create one with: floorplan gt-template benchmark/runs/lidar/<id> --out benchmark/ground_truth/<id>.json, then fill in the nulls. Captures without a ground-truth file are run but not scored.",
+  "units": "meters",
+  "captures": [
+    {"id": "benchmark_1", "path": "benchmark_1.r3d", "tier": "lidar", "ground_truth": "ground_truth/benchmark_1.json"},
+    {"id": "benchmark_2", "path": "benchmark_2.r3d", "tier": "lidar", "ground_truth": "ground_truth/benchmark_2.json"},
+    {"id": "c00a170fe1", "path": "../../assignment/Assignment/c00a170fe1", "tier": "lidar", "ground_truth": "ground_truth/c00a170fe1.json"},
+    {"id": "1a8384c3f6", "path": "../../assignment/Assignment/1a8384c3f6", "tier": "lidar", "ground_truth": "ground_truth/1a8384c3f6.json"},
+    {"id": "c7d28f72c6", "path": "../../assignment/Assignment/c7d28f72c6", "tier": "lidar", "ground_truth": "ground_truth/c7d28f72c6.json"}
+  ],
+  "repeatability": []
+}

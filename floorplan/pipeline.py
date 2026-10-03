@@ -7,6 +7,7 @@ JSON contract identical across them.
 """
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import replace
 from pathlib import Path
@@ -21,6 +22,7 @@ from floorplan.fusion import arbiter, colmap_path, depth_fusion, monodepth, scal
 from floorplan.fusion.ir import NATIVE_METRIC, NONE_PRIOR, Reconstruction, is_metric
 from floorplan.geometry import align
 from floorplan.geometry import confidence
+from floorplan.geometry import layout as layout_mod
 from floorplan.geometry import multiroom
 from floorplan.geometry import openings as openings_mod
 from floorplan.geometry import planes as planes_mod
@@ -56,7 +58,9 @@ def _run_lidar(capture_path: str | Path, out: Path, cfg: Settings, verbose: bool
     cap = record3d.load(capture_path)
     timings["ingest"] = time.time() - t0
 
-    drift_info = dict(_NO_DRIFT)
+    # The old position-proximity "loop closure" nudged poses by <= 5 cm without
+    # any verified constraint; it is off by default and reported honestly.
+    drift_info = {**_NO_DRIFT, "method": "none (ARKit VIO poses, no verified loop constraint)"}
     if cfg.drift_correction:
         loops = drift_mod.detect_loops(cap.pos)
         if loops:
@@ -68,15 +72,20 @@ def _run_lidar(capture_path: str | Path, out: Path, cfg: Settings, verbose: bool
 
     t0 = time.time()
     convention = depth_fusion.detect_pose_convention(cap, cfg)
-    pcd = depth_fusion.fuse(cap, cfg, verbose=verbose, convention=convention)
+    mesh_path = out / "scan_mesh.ply" if cfg.lidar_fusion == "tsdf" else None
+    pcd = depth_fusion.fuse(cap, cfg, verbose=verbose, convention=convention, mesh_path=mesh_path)
     timings["fusion"] = time.time() - t0
     pts = np.asarray(pcd.points)
 
     recon = Reconstruction(points=pts, tier="lidar",
-                           path_chosen=f"depth_fusion:{convention}",
-                           scale_reference=NATIVE_METRIC)
+                           path_chosen=f"depth_fusion:{cfg.lidar_fusion}:{convention}",
+                           scale_reference=NATIVE_METRIC,
+                           notes={"pose_selection": cap.pose_selection,
+                                  "mesh": "scan_mesh.ply" if mesh_path else None})
+    frames = cap.frame_ids if cap.frame_ids is not None else np.arange(cap.n_frames)
+    cams = (frames, depth_fusion.camera_centres(cap, convention))
     return _geometry_and_export(pts, cap.capture_id, "lidar", out, cfg, verbose,
-                                timings, drift_info, recon, capture_path)
+                                timings, drift_info, recon, capture_path, cameras=cams)
 
 
 # ── Photos / video tiers ─────────────────────────────────────────────────────
@@ -87,7 +96,8 @@ def _run_photo_video(capture_path: str | Path, out: Path, cfg: Settings,
 
     t0 = time.time()
     if tier == "video":
-        photos = video_mod.load(capture_path, fps=cfg.video_fps)
+        photos = video_mod.load(capture_path, fps=cfg.video_fps, mode=cfg.video_keyframes,
+                                max_frames=cfg.video_max_frames, max_dim=cfg.video_max_dim)
     else:
         photos = photos_mod.load(capture_path)
     timings["ingest"] = time.time() - t0
@@ -163,6 +173,7 @@ def _run_photo_video(capture_path: str | Path, out: Path, cfg: Settings,
                 scale_reference=ref, scale_factor=s, conf=sfm.conf,
                 notes={**notes, "registered": sfm.n_registered, "images": sfm.n_images,
                        "points_raw": sfm.n_points, "camera_centres": sfm.centres,
+                       "camera_names": [im.name for im in sfm.images],
                        "up_hint": sfm.up_hint}))
 
     timings["fusion"] = time.time() - t0
@@ -184,10 +195,21 @@ def _run_photo_video(capture_path: str | Path, out: Path, cfg: Settings,
                   "ablation": {"on": None, "off": None}}
     above = recon.notes.get("camera_centres")
     up_hint = recon.notes.get("up_hint")
+    cams = None
+    names = recon.notes.get("camera_names")
+    if above is not None and names is not None:
+        cams = (np.asarray([_source_frame(photos, n) for n in names]), np.asarray(above))
     return _geometry_and_export(recon.points, photos.capture_id, tier, out, cfg, verbose,
                                 timings, drift_info, recon, capture_path,
                                 above_points=np.asarray(above) if above is not None else None,
-                                up_hint=np.asarray(up_hint) if up_hint is not None else None)
+                                up_hint=np.asarray(up_hint) if up_hint is not None else None,
+                                cameras=cams)
+
+
+def _source_frame(photos, colmap_name: str) -> int:
+    """COLMAP image '<k>.jpg' is the k-th input; map it to its source frame."""
+    k = int(Path(colmap_name).stem)
+    return int(photos.source_index[k]) if photos.source_index else k
 
 
 # ── Shared geometry + export tail ────────────────────────────────────────────
@@ -196,8 +218,10 @@ def _geometry_and_export(pts: np.ndarray, capture_id: str, tier: str, out: Path,
                          cfg: Settings, verbose: bool, timings: dict, drift_info: dict,
                          recon: Reconstruction, capture_path: str | Path,
                          above_points: np.ndarray | None = None,
-                         up_hint: np.ndarray | None = None) -> dict:
+                         up_hint: np.ndarray | None = None,
+                         cameras: tuple[np.ndarray, np.ndarray] | None = None) -> dict:
     pts = np.asarray(pts, dtype=np.float64)
+    R_up = np.eye(3)
     if cfg.auto_up and len(pts) > 1000 and not recon.notes.get("prealigned"):
         if tier == "lidar":
             up = align.estimate_up(pts, cfg, above_points=above_points)
@@ -222,21 +246,53 @@ def _geometry_and_export(pts: np.ndarray, capture_id: str, tier: str, out: Path,
             up = align.estimate_up(pts, cfg, above_points=above_points)
             apply = up[2] < 1.0 - 1e-4         # arbitrary frame: rotate to +Z
         if apply:
-            pts = pts @ align.rotation_to_z(up).T
+            R_up = align.rotation_to_z(up)
+            pts = pts @ R_up.T
             if verbose:
                 print(f"[align] up axis {np.round(up, 3)} -> rotated upright")
+    if cameras is not None:
+        frames, centres = cameras
+        (out / "cameras.json").write_text(json.dumps({
+            "frame": [int(f) for f in frames],
+            "centre": np.round(np.asarray(centres) @ R_up.T, 5).tolist()}))
     o3d.io.write_point_cloud(str(out / "scan_metric.ply"),
                              o3d.geometry.PointCloud(o3d.utility.Vector3dVector(pts)))
 
     t0 = time.time()
     pls = planes_mod.extract_planes(pts, cfg)
-    floor_z, ceil_z, observed, floor_pts, ceil_pts = room_mod.floor_and_ceiling(pls, pts, cfg)
+    cam_z = (float(np.median((np.asarray(cameras[1]) @ R_up.T)[:, 2]))
+             if cameras is not None and len(cameras[1]) else None)
+    floor_z, ceil_z, observed, floor_pts, ceil_pts = room_mod.floor_and_ceiling(
+        pls, pts, cfg, cam_z=cam_z)
     vplanes = [p for p in pls if p.kind == "vertical"]
     walls = walls_mod.vectorize(vplanes, floor_z, cfg)
     walls = walls_mod.merge_double_walls(walls, cfg)
     walls = walls_mod.snap_orthogonal(walls, cfg)
-    rooms = multiroom.extract_rooms(walls, floor_z, ceil_z, observed,
-                                    floor_pts, ceil_pts, cfg)
+    rooms = []
+    if cfg.layout:
+        theta = max(walls, key=lambda w: w.length).angle if walls else 0.0
+        cams_xy = ((np.asarray(cameras[1]) @ R_up.T)[:, :2]
+                   if cameras is not None and len(cameras[1]) else None)
+        polys = layout_mod.rooms(pts, floor_z, ceil_z, observed, cams_xy, theta, cfg)
+        for k, (poly, spread) in enumerate(polys):
+            owalls = walls_mod.from_outline(poly, pts, floor_z, cfg)
+            n_e = len(poly)
+            for e, w in enumerate(owalls):
+                # a wall's length runs between its two neighbouring walls' surfaces
+                w.length_sigma = float(np.hypot(spread[(e - 1) % n_e], spread[(e + 1) % n_e]))
+            rc = room_mod.room_ceiling(pts, poly, floor_z, cam_z, cfg)
+            r_ceil, r_obs, r_ceil_pts = rc if rc is not None else (ceil_z, observed, ceil_pts)
+            r_floor_pts = floor_pts[room_mod.point_in_polygon(floor_pts[:, :2], poly)] \
+                if len(floor_pts) else floor_pts
+            if len(r_floor_pts) < 30:
+                r_floor_pts = floor_pts
+            r = room_mod.assemble_outline(poly, owalls, floor_z, r_ceil, r_obs,
+                                          r_floor_pts, r_ceil_pts, cfg)
+            r.room_id = f"r{k + 1}"
+            rooms.append(r)
+    if not rooms:
+        rooms = multiroom.extract_rooms(walls, floor_z, ceil_z, observed,
+                                        floor_pts, ceil_pts, cfg)
     if not rooms:
         rooms = [room_mod.assemble(walls, floor_z, ceil_z, observed,
                                    floor_pts, ceil_pts, pts, cfg)]
@@ -244,24 +300,33 @@ def _geometry_and_export(pts: np.ndarray, capture_id: str, tier: str, out: Path,
     # single room can arrive with a dozen spurious walls and an 18-vertex
     # polygon. When that happens, rebuild the room from the floor footprint: a
     # stable closed outline with a small, consistent wall set.
-    if len(rooms) == 1 and len(rooms[0].walls) > cfg.max_room_walls:
+    if not cfg.layout and len(rooms) == 1 and len(rooms[0].walls) > cfg.max_room_walls:
         outline = room_mod.footprint_outline(floor_pts, cfg)
         if outline is not None and len(outline) >= 3:
             owalls = walls_mod.from_outline(outline, pts, floor_z, cfg)
             rooms = [room_mod.assemble_outline(outline, owalls, floor_z, ceil_z,
                                                observed, floor_pts, ceil_pts, cfg)]
+    for i, w in enumerate(w for r in rooms for w in r.walls):  # ids unique across rooms
+        w.id = i
     timings["geometry"] = time.time() - t0
 
     t0 = time.time()
     wall_ci: dict[int, list[float]] = {}
+    cloud_sub = pts[np.linspace(0, len(pts) - 1, min(len(pts), 800_000)).astype(int)]
     for w in (w for r in rooms for w in r.walls):
-        w.openings = openings_mod.detect(w.start, w.end, w.points, floor_z, cfg)
+        inward = w.normal if w.plane_id == -1 else None   # layout walls: normal points inside
+        w.openings = openings_mod.detect(w.start, w.end, w.points, floor_z, cfg,
+                                         cloud=cloud_sub, inward=inward)
+        if w.length_sigma is not None:
+            half = 1.96 * w.length_sigma
+            wall_ci[w.id] = [round(w.length - half, 4), round(w.length + half, 4)]
+            continue
         bp = w.band_points if w.band_points is not None and len(w.band_points) >= 30 else w.points
         ci = confidence.bootstrap_length(bp, cfg)
         if ci is not None:
             wall_ci[w.id] = ci
     adjacency = multiroom.adjacency(rooms) if len(rooms) > 1 else []
-    prop = room_mod.property_area(floor_pts, cfg)
+    prop = room_mod.property_area(floor_pts, cfg, rooms=rooms)
     timings["confidence"] = time.time() - t0
 
     if verbose:
@@ -273,15 +338,25 @@ def _geometry_and_export(pts: np.ndarray, capture_id: str, tier: str, out: Path,
     scale_payload = {"scale_reference": recon.scale_reference,
                      "scale_factor": round(float(recon.scale_factor), 4),
                      "metric": recon.scale_reference != NONE_PRIOR}
+    sc = recon.notes.get("scale_ci95_rel")
+    scale_rel = (float(sc[1]) - 1.0) if sc else (0.0 if tier == "lidar" else 0.20)
+    scale_payload["ci95_rel"] = round(scale_rel, 4)
+    scale_payload.update({k: recon.notes[k] for k in
+                          ("scale_focal_correction", "scale_calibrated_framing", "hold")
+                          if k in recon.notes})
     payload = json_export.build_payload(
         capture_id, tier, rooms, wall_ci, cfg,
-        property_footprint=json_export.measurement(prop.value, prop.ci95, prop.method),
-        adjacency=adjacency, drift=drift_info, scale=scale_payload,
+        property_footprint=json_export.measurement(
+            prop.value, json_export.widen(prop.value, prop.ci95, 2 * scale_rel), prop.method),
+        adjacency=adjacency, drift=drift_info, scale=scale_payload, scale_rel=scale_rel,
     )
+    if recon.notes.get("mesh"):
+        payload["artifacts"]["mesh"] = recon.notes["mesh"]
     json_export.dump(payload, out / "results.json")
     label = {"lidar": "LiDAR", "photos": "Photos", "video": "Video"}.get(tier, tier)
     svg.render(rooms, out / "floor_plan.svg",
-               title=f"{capture_id} — {label} ({len(rooms)} room{'s' if len(rooms) != 1 else ''})")
+               title=f"{capture_id} — {label} ({len(rooms)} room{'s' if len(rooms) != 1 else ''})",
+               payload=payload)
     dxf.render(rooms, out / "floor_plan.dxf")
     prov = provenance.write(out / "provenance.json", tier=tier, capture_id=capture_id,
                             cfg=cfg, timings=timings, path_chosen=recon.path_chosen,
@@ -289,7 +364,8 @@ def _geometry_and_export(pts: np.ndarray, capture_id: str, tier: str, out: Path,
                             extra={"scale_reference": recon.scale_reference,
                                    "scale_factor": round(float(recon.scale_factor), 4),
                                    "arbiter": recon.notes.get("arbiter", []),
-                                   "reference_capture": cfg.reference_capture})
+                                   "reference_capture": cfg.reference_capture,
+                                   "pose_selection": recon.notes.get("pose_selection")})
     if verbose:
         print(f"[done] {out}  (total {prov['total_s']}s)")
     return payload
