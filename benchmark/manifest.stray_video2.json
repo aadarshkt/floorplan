@@ -1,0 +1,19 @@
+{
+  "units": "meters",
+  "captures": [
+    {
+      "id": "study_room_friend",
+      "path": "captures/study_room_friend/7ff943baa3/rgb.mp4",
+      "tier": "video",
+      "room_id": "r1",
+      "ground_truth": "ground_truth/study_room_friend.json"
+    },
+    {
+      "id": "bedroom_2",
+      "path": "captures/bedroom_2/884d809160/rgb.mp4",
+      "tier": "video",
+      "room_id": "r1",
+      "ground_truth": "ground_truth/bedroom_2.json"
+    }
+  ]
+}

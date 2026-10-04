@@ -1,0 +1,1347 @@
+{
+  "schema_version": "1.0",
+  "capture_id": "c7d28f72c6",
+  "tier": "lidar",
+  "units": "meters",
+  "property": {
+    "footprint_area_m2": {
+      "value": 69.163,
+      "ci95": [
+        67.5537,
+        70.7731
+      ],
+      "method": "sum_of_room_polygons"
+    },
+    "rooms": [
+      "r1",
+      "r2",
+      "r3",
+      "r4",
+      "r5"
+    ],
+    "adjacency": [
+      {
+        "a": "r1",
+        "b": "r2",
+        "via": "shared_wall"
+      },
+      {
+        "a": "r1",
+        "b": "r3",
+        "via": "door",
+        "door": "r1-w5-o1",
+        "width_m": 1.04
+      },
+      {
+        "a": "r1",
+        "b": "r5",
+        "via": "shared_wall"
+      },
+      {
+        "a": "r2",
+        "b": "r5",
+        "via": "shared_wall"
+      },
+      {
+        "a": "r3",
+        "b": "r4",
+        "via": "shared_wall"
+      }
+    ]
+  },
+  "rooms": [
+    {
+      "room_id": "r1",
+      "polygon": [
+        [
+          -4.889,
+          -7.462
+        ],
+        [
+          -2.428,
+          -8.788
+        ],
+        [
+          -2.585,
+          -9.079
+        ],
+        [
+          -1.627,
+          -9.596
+        ],
+        [
+          0.482,
+          -5.681
+        ],
+        [
+          2.724,
+          -6.889
+        ],
+        [
+          4.718,
+          -3.189
+        ],
+        [
+          1.736,
+          -1.582
+        ],
+        [
+          0.153,
+          -4.52
+        ],
+        [
+          -0.993,
+          -3.902
+        ],
+        [
+          -1.518,
+          -4.876
+        ],
+        [
+          -1.881,
+          -4.68
+        ],
+        [
+          -3.195,
+          -7.119
+        ],
+        [
+          -3.458,
+          -6.978
+        ],
+        [
+          -3.21,
+          -6.517
+        ],
+        [
+          -4.116,
+          -6.029
+        ]
+      ],
+      "floor_area_m2": {
+        "value": 28.15,
+        "ci95": [
+          27.4939,
+          28.8061
+        ],
+        "method": "footprint_outline"
+      },
+      "ceiling_height_m": {
+        "value": 2.377,
+        "ci95": [
+          2.3638,
+          2.3883
+        ],
+        "method": "bootstrap",
+        "observed": true
+      },
+      "walls": [
+        {
+          "wall_id": "r1-w0",
+          "start": [
+            -4.889,
+            -7.462
+          ],
+          "end": [
+            -2.428,
+            -8.788
+          ],
+          "length_m": {
+            "value": 2.7949,
+            "ci95": [
+              2.7438,
+              2.846
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w1",
+          "start": [
+            -2.428,
+            -8.788
+          ],
+          "end": [
+            -2.585,
+            -9.079
+          ],
+          "length_m": {
+            "value": 0.3308,
+            "ci95": [
+              0.2692,
+              0.3924
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w2",
+          "start": [
+            -2.585,
+            -9.079
+          ],
+          "end": [
+            -1.627,
+            -9.596
+          ],
+          "length_m": {
+            "value": 1.0881,
+            "ci95": [
+              1.0302,
+              1.146
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w3",
+          "start": [
+            -1.627,
+            -9.596
+          ],
+          "end": [
+            0.482,
+            -5.681
+          ],
+          "length_m": {
+            "value": 4.4466,
+            "ci95": [
+              4.375,
+              4.5181
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w4",
+          "start": [
+            0.482,
+            -5.681
+          ],
+          "end": [
+            2.724,
+            -6.889
+          ],
+          "length_m": {
+            "value": 2.5469,
+            "ci95": [
+              2.4699,
+              2.6239
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w5",
+          "start": [
+            2.724,
+            -6.889
+          ],
+          "end": [
+            4.718,
+            -3.189
+          ],
+          "length_m": {
+            "value": 4.203,
+            "ci95": [
+              4.132,
+              4.2741
+            ],
+            "method": "bootstrap"
+          },
+          "openings": [
+            {
+              "opening_id": "r1-w5-o0",
+              "type": "window",
+              "position_along_wall_m": 0.59,
+              "width_m": {
+                "value": 0.7001,
+                "ci95": [
+                  0.6801,
+                  0.7201
+                ],
+                "method": "jamb_to_jamb"
+              },
+              "seen_through": true,
+              "sill_m": 0.4,
+              "head_m": 0.0
+            },
+            {
+              "opening_id": "r1-w5-o1",
+              "type": "door",
+              "position_along_wall_m": 1.5,
+              "width_m": {
+                "value": 1.0401,
+                "ci95": [
+                  1.0201,
+                  1.0601
+                ],
+                "method": "jamb_to_jamb"
+              },
+              "seen_through": true,
+              "sill_m": 0.0,
+              "head_m": 2.2
+            }
+          ]
+        },
+        {
+          "wall_id": "r1-w6",
+          "start": [
+            4.718,
+            -3.189
+          ],
+          "end": [
+            1.736,
+            -1.582
+          ],
+          "length_m": {
+            "value": 3.3875,
+            "ci95": [
+              3.3238,
+              3.4513
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w7",
+          "start": [
+            1.736,
+            -1.582
+          ],
+          "end": [
+            0.153,
+            -4.52
+          ],
+          "length_m": {
+            "value": 3.3368,
+            "ci95": [
+              3.2602,
+              3.4134
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w8",
+          "start": [
+            0.153,
+            -4.52
+          ],
+          "end": [
+            -0.993,
+            -3.902
+          ],
+          "length_m": {
+            "value": 1.302,
+            "ci95": [
+              1.261,
+              1.343
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w9",
+          "start": [
+            -0.993,
+            -3.902
+          ],
+          "end": [
+            -1.518,
+            -4.876
+          ],
+          "length_m": {
+            "value": 1.1058,
+            "ci95": [
+              1.0402,
+              1.1713
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w10",
+          "start": [
+            -1.518,
+            -4.876
+          ],
+          "end": [
+            -1.881,
+            -4.68
+          ],
+          "length_m": {
+            "value": 0.4127,
+            "ci95": [
+              0.366,
+              0.4595
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w11",
+          "start": [
+            -1.881,
+            -4.68
+          ],
+          "end": [
+            -3.195,
+            -7.119
+          ],
+          "length_m": {
+            "value": 2.7708,
+            "ci95": [
+              2.7148,
+              2.8268
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w12",
+          "start": [
+            -3.195,
+            -7.119
+          ],
+          "end": [
+            -3.458,
+            -6.978
+          ],
+          "length_m": {
+            "value": 0.2981,
+            "ci95": [
+              0.2451,
+              0.3511
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w13",
+          "start": [
+            -3.458,
+            -6.978
+          ],
+          "end": [
+            -3.21,
+            -6.517
+          ],
+          "length_m": {
+            "value": 0.5227,
+            "ci95": [
+              0.462,
+              0.5835
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w14",
+          "start": [
+            -3.21,
+            -6.517
+          ],
+          "end": [
+            -4.116,
+            -6.029
+          ],
+          "length_m": {
+            "value": 1.0296,
+            "ci95": [
+              0.9709,
+              1.0883
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w15",
+          "start": [
+            -4.116,
+            -6.029
+          ],
+          "end": [
+            -4.889,
+            -7.462
+          ],
+          "length_m": {
+            "value": 1.6283,
+            "ci95": [
+              1.5762,
+              1.6804
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        }
+      ],
+      "damage_regions": [],
+      "concealed_damage_flags": [],
+      "scope_line_items": []
+    },
+    {
+      "room_id": "r2",
+      "polygon": [
+        [
+          -2.103,
+          -2.347
+        ],
+        [
+          -0.595,
+          -3.16
+        ],
+        [
+          -1.685,
+          -5.183
+        ],
+        [
+          -0.357,
+          -5.899
+        ],
+        [
+          1.811,
+          -1.877
+        ],
+        [
+          1.097,
+          -1.492
+        ],
+        [
+          2.033,
+          0.246
+        ],
+        [
+          1.394,
+          0.591
+        ],
+        [
+          1.466,
+          0.724
+        ],
+        [
+          -0.017,
+          1.524
+        ]
+      ],
+      "floor_area_m2": {
+        "value": 15.803,
+        "ci95": [
+          15.4431,
+          16.1624
+        ],
+        "method": "footprint_outline"
+      },
+      "ceiling_height_m": {
+        "value": 2.939,
+        "ci95": [
+          2.9278,
+          2.9507
+        ],
+        "method": "bootstrap",
+        "observed": true
+      },
+      "walls": [
+        {
+          "wall_id": "r2-w16",
+          "start": [
+            -2.103,
+            -2.347
+          ],
+          "end": [
+            -0.595,
+            -3.16
+          ],
+          "length_m": {
+            "value": 1.7138,
+            "ci95": [
+              1.6651,
+              1.7626
+            ],
+            "method": "bootstrap"
+          },
+          "openings": [
+            {
+              "opening_id": "r2-w16-o0",
+              "type": "window",
+              "position_along_wall_m": 0.27,
+              "width_m": {
+                "value": 0.4201,
+                "ci95": [
+                  0.4001,
+                  0.4401
+                ],
+                "method": "jamb_to_jamb"
+              },
+              "seen_through": true,
+              "sill_m": 1.0,
+              "head_m": 0.0
+            }
+          ]
+        },
+        {
+          "wall_id": "r2-w17",
+          "start": [
+            -0.595,
+            -3.16
+          ],
+          "end": [
+            -1.685,
+            -5.183
+          ],
+          "length_m": {
+            "value": 2.2986,
+            "ci95": [
+              2.2613,
+              2.3358
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r2-w18",
+          "start": [
+            -1.685,
+            -5.183
+          ],
+          "end": [
+            -0.357,
+            -5.899
+          ],
+          "length_m": {
+            "value": 1.5088,
+            "ci95": [
+              1.4694,
+              1.5482
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r2-w19",
+          "start": [
+            -0.357,
+            -5.899
+          ],
+          "end": [
+            1.811,
+            -1.877
+          ],
+          "length_m": {
+            "value": 4.5696,
+            "ci95": [
+              4.5056,
+              4.6336
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r2-w20",
+          "start": [
+            1.811,
+            -1.877
+          ],
+          "end": [
+            1.097,
+            -1.492
+          ],
+          "length_m": {
+            "value": 0.8113,
+            "ci95": [
+              0.7482,
+              0.8743
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r2-w21",
+          "start": [
+            1.097,
+            -1.492
+          ],
+          "end": [
+            2.033,
+            0.246
+          ],
+          "length_m": {
+            "value": 1.9741,
+            "ci95": [
+              1.9096,
+              2.0385
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r2-w22",
+          "start": [
+            2.033,
+            0.246
+          ],
+          "end": [
+            1.394,
+            0.591
+          ],
+          "length_m": {
+            "value": 0.7267,
+            "ci95": [
+              0.6602,
+              0.7931
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r2-w23",
+          "start": [
+            1.394,
+            0.591
+          ],
+          "end": [
+            1.466,
+            0.724
+          ],
+          "length_m": {
+            "value": 0.1516,
+            "ci95": [
+              0.1034,
+              0.1999
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r2-w24",
+          "start": [
+            1.466,
+            0.724
+          ],
+          "end": [
+            -0.017,
+            1.524
+          ],
+          "length_m": {
+            "value": 1.6847,
+            "ci95": [
+              1.6345,
+              1.735
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r2-w25",
+          "start": [
+            -0.017,
+            1.524
+          ],
+          "end": [
+            -2.103,
+            -2.347
+          ],
+          "length_m": {
+            "value": 4.3968,
+            "ci95": [
+              4.3467,
+              4.4469
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        }
+      ],
+      "damage_regions": [],
+      "concealed_damage_flags": [],
+      "scope_line_items": []
+    },
+    {
+      "room_id": "r3",
+      "polygon": [
+        [
+          2.479,
+          -6.79
+        ],
+        [
+          3.451,
+          -7.313
+        ],
+        [
+          4.305,
+          -5.728
+        ],
+        [
+          6.33,
+          -6.819
+        ],
+        [
+          7.783,
+          -4.123
+        ],
+        [
+          4.787,
+          -2.508
+        ]
+      ],
+      "floor_area_m2": {
+        "value": 12.41,
+        "ci95": [
+          12.0641,
+          12.7556
+        ],
+        "method": "footprint_outline"
+      },
+      "ceiling_height_m": {
+        "value": 3.091,
+        "ci95": [
+          3.0797,
+          3.1021
+        ],
+        "method": "bootstrap",
+        "observed": true
+      },
+      "walls": [
+        {
+          "wall_id": "r3-w26",
+          "start": [
+            2.479,
+            -6.79
+          ],
+          "end": [
+            3.451,
+            -7.313
+          ],
+          "length_m": {
+            "value": 1.1035,
+            "ci95": [
+              1.0437,
+              1.1632
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r3-w27",
+          "start": [
+            3.451,
+            -7.313
+          ],
+          "end": [
+            4.305,
+            -5.728
+          ],
+          "length_m": {
+            "value": 1.8011,
+            "ci95": [
+              1.7532,
+              1.8491
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r3-w28",
+          "start": [
+            4.305,
+            -5.728
+          ],
+          "end": [
+            6.33,
+            -6.819
+          ],
+          "length_m": {
+            "value": 2.2999,
+            "ci95": [
+              2.2422,
+              2.3577
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r3-w29",
+          "start": [
+            6.33,
+            -6.819
+          ],
+          "end": [
+            7.783,
+            -4.123
+          ],
+          "length_m": {
+            "value": 3.0623,
+            "ci95": [
+              3.015,
+              3.1097
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r3-w30",
+          "start": [
+            7.783,
+            -4.123
+          ],
+          "end": [
+            4.787,
+            -2.508
+          ],
+          "length_m": {
+            "value": 3.4034,
+            "ci95": [
+              3.342,
+              3.4648
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r3-w31",
+          "start": [
+            4.787,
+            -2.508
+          ],
+          "end": [
+            2.479,
+            -6.79
+          ],
+          "length_m": {
+            "value": 4.8635,
+            "ci95": [
+              4.806,
+              4.921
+            ],
+            "method": "bootstrap"
+          },
+          "openings": [
+            {
+              "opening_id": "r3-w31-o0",
+              "type": "window",
+              "position_along_wall_m": 4.35,
+              "width_m": {
+                "value": 0.5,
+                "ci95": [
+                  0.48,
+                  0.52
+                ],
+                "method": "jamb_to_jamb"
+              },
+              "seen_through": true,
+              "sill_m": 0.3,
+              "head_m": 0.0
+            }
+          ]
+        }
+      ],
+      "damage_regions": [],
+      "concealed_damage_flags": [],
+      "scope_line_items": []
+    },
+    {
+      "room_id": "r4",
+      "polygon": [
+        [
+          2.938,
+          -8.383
+        ],
+        [
+          5.104,
+          -9.55
+        ],
+        [
+          6.558,
+          -6.852
+        ],
+        [
+          4.392,
+          -5.684
+        ]
+      ],
+      "floor_area_m2": {
+        "value": 7.544,
+        "ci95": [
+          7.2936,
+          7.7946
+        ],
+        "method": "footprint_outline"
+      },
+      "ceiling_height_m": {
+        "value": 2.378,
+        "ci95": [
+          2.3666,
+          2.3891
+        ],
+        "method": "bootstrap",
+        "observed": true
+      },
+      "walls": [
+        {
+          "wall_id": "r4-w32",
+          "start": [
+            2.938,
+            -8.383
+          ],
+          "end": [
+            5.104,
+            -9.55
+          ],
+          "length_m": {
+            "value": 2.4608,
+            "ci95": [
+              2.3921,
+              2.5296
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r4-w33",
+          "start": [
+            5.104,
+            -9.55
+          ],
+          "end": [
+            6.558,
+            -6.852
+          ],
+          "length_m": {
+            "value": 3.0657,
+            "ci95": [
+              3.0123,
+              3.119
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r4-w34",
+          "start": [
+            6.558,
+            -6.852
+          ],
+          "end": [
+            4.392,
+            -5.684
+          ],
+          "length_m": {
+            "value": 2.4608,
+            "ci95": [
+              2.3921,
+              2.5296
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r4-w35",
+          "start": [
+            4.392,
+            -5.684
+          ],
+          "end": [
+            2.938,
+            -8.383
+          ],
+          "length_m": {
+            "value": 3.0657,
+            "ci95": [
+              3.0123,
+              3.119
+            ],
+            "method": "bootstrap"
+          },
+          "openings": [
+            {
+              "opening_id": "r4-w35-o0",
+              "type": "door",
+              "position_along_wall_m": 2.48,
+              "width_m": {
+                "value": 0.6404,
+                "ci95": [
+                  0.6204,
+                  0.6604
+                ],
+                "method": "jamb_to_jamb"
+              },
+              "seen_through": true,
+              "sill_m": 0.0,
+              "head_m": 2.2
+            }
+          ]
+        }
+      ],
+      "damage_regions": [],
+      "concealed_damage_flags": [],
+      "scope_line_items": []
+    },
+    {
+      "room_id": "r5",
+      "polygon": [
+        [
+          -3.295,
+          -4.535
+        ],
+        [
+          -1.684,
+          -5.403
+        ],
+        [
+          -0.321,
+          -2.874
+        ],
+        [
+          -1.932,
+          -2.006
+        ]
+      ],
+      "floor_area_m2": {
+        "value": 5.257,
+        "ci95": [
+          5.1026,
+          5.412
+        ],
+        "method": "footprint_outline"
+      },
+      "ceiling_height_m": {
+        "value": 2.267,
+        "ci95": [
+          2.2556,
+          2.2865
+        ],
+        "method": "bootstrap",
+        "observed": true
+      },
+      "walls": [
+        {
+          "wall_id": "r5-w36",
+          "start": [
+            -3.295,
+            -4.535
+          ],
+          "end": [
+            -1.684,
+            -5.403
+          ],
+          "length_m": {
+            "value": 1.83,
+            "ci95": [
+              1.7832,
+              1.8768
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r5-w37",
+          "start": [
+            -1.684,
+            -5.403
+          ],
+          "end": [
+            -0.321,
+            -2.874
+          ],
+          "length_m": {
+            "value": 2.8729,
+            "ci95": [
+              2.8346,
+              2.9111
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r5-w38",
+          "start": [
+            -0.321,
+            -2.874
+          ],
+          "end": [
+            -1.932,
+            -2.006
+          ],
+          "length_m": {
+            "value": 1.83,
+            "ci95": [
+              1.7832,
+              1.8768
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r5-w39",
+          "start": [
+            -1.932,
+            -2.006
+          ],
+          "end": [
+            -3.295,
+            -4.535
+          ],
+          "length_m": {
+            "value": 2.8729,
+            "ci95": [
+              2.8346,
+              2.9111
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        }
+      ],
+      "damage_regions": [],
+      "concealed_damage_flags": [],
+      "scope_line_items": []
+    }
+  ],
+  "drift": {
+    "method": "pose_graph",
+    "n_loops": 13,
+    "correction_applied": true,
+    "ablation": {
+      "on": null,
+      "off": null
+    },
+    "n_keyframes": 120,
+    "n_candidates": 80,
+    "max_correction_m": 0.655,
+    "mean_correction_m": 0.233,
+    "loop_error_m": {
+      "before_median": 0.255,
+      "before_max": 0.553,
+      "after_median": 0.021,
+      "after_max": 0.125
+    },
+    "loops": [
+      {
+        "from_kf": 1228,
+        "to_kf": 6223,
+        "fitness": 0.687,
+        "icp_rmse_m": 0.03
+      },
+      {
+        "from_kf": 327,
+        "to_kf": 5404,
+        "fitness": 0.667,
+        "icp_rmse_m": 0.0272
+      },
+      {
+        "from_kf": 491,
+        "to_kf": 5568,
+        "fitness": 0.661,
+        "icp_rmse_m": 0.0377
+      },
+      {
+        "from_kf": 736,
+        "to_kf": 5731,
+        "fitness": 0.62,
+        "icp_rmse_m": 0.0334
+      },
+      {
+        "from_kf": 163,
+        "to_kf": 5240,
+        "fitness": 0.604,
+        "icp_rmse_m": 0.0275
+      },
+      {
+        "from_kf": 1473,
+        "to_kf": 2538,
+        "fitness": 0.578,
+        "icp_rmse_m": 0.0343
+      },
+      {
+        "from_kf": 1310,
+        "to_kf": 6304,
+        "fitness": 0.557,
+        "icp_rmse_m": 0.0277
+      },
+      {
+        "from_kf": 245,
+        "to_kf": 5322,
+        "fitness": 0.551,
+        "icp_rmse_m": 0.0291
+      },
+      {
+        "from_kf": 900,
+        "to_kf": 5895,
+        "fitness": 0.493,
+        "icp_rmse_m": 0.0336
+      },
+      {
+        "from_kf": 3520,
+        "to_kf": 8188,
+        "fitness": 0.476,
+        "icp_rmse_m": 0.0268
+      },
+      {
+        "from_kf": 3029,
+        "to_kf": 7696,
+        "fitness": 0.466,
+        "icp_rmse_m": 0.0294
+      },
+      {
+        "from_kf": 3193,
+        "to_kf": 7860,
+        "fitness": 0.464,
+        "icp_rmse_m": 0.0325
+      },
+      {
+        "from_kf": 573,
+        "to_kf": 5649,
+        "fitness": 0.455,
+        "icp_rmse_m": 0.032
+      }
+    ]
+  },
+  "scale": {
+    "scale_reference": "native_metric",
+    "scale_factor": 1.0,
+    "metric": true,
+    "ci95_rel": 0.0
+  },
+  "confidence": {
+    "calibration_factor": 1.0,
+    "method": "bootstrap+propagation"
+  },
+  "artifacts": {
+    "svg": "floor_plan.svg",
+    "dxf": "floor_plan.dxf",
+    "pointcloud": "scan_metric.ply"
+  }
+}

@@ -1,0 +1,140 @@
+{
+  "capture": "../assignment/Assignment/c7d28f72c6",
+  "on": {
+    "footprint_m2": 69.163,
+    "rooms": 5,
+    "bbox_m": [
+      12.672,
+      11.12
+    ],
+    "walls": 40,
+    "total_wall_m": 88.033,
+    "drift": {
+      "method": "pose_graph",
+      "n_loops": 13,
+      "correction_applied": true,
+      "ablation": {
+        "on": null,
+        "off": null
+      },
+      "n_keyframes": 120,
+      "n_candidates": 80,
+      "max_correction_m": 0.655,
+      "mean_correction_m": 0.233,
+      "loop_error_m": {
+        "before_median": 0.255,
+        "before_max": 0.553,
+        "after_median": 0.021,
+        "after_max": 0.125
+      },
+      "loops": [
+        {
+          "from_kf": 1228,
+          "to_kf": 6223,
+          "fitness": 0.687,
+          "icp_rmse_m": 0.03
+        },
+        {
+          "from_kf": 327,
+          "to_kf": 5404,
+          "fitness": 0.667,
+          "icp_rmse_m": 0.0272
+        },
+        {
+          "from_kf": 491,
+          "to_kf": 5568,
+          "fitness": 0.661,
+          "icp_rmse_m": 0.0377
+        },
+        {
+          "from_kf": 736,
+          "to_kf": 5731,
+          "fitness": 0.62,
+          "icp_rmse_m": 0.0334
+        },
+        {
+          "from_kf": 163,
+          "to_kf": 5240,
+          "fitness": 0.604,
+          "icp_rmse_m": 0.0275
+        },
+        {
+          "from_kf": 1473,
+          "to_kf": 2538,
+          "fitness": 0.578,
+          "icp_rmse_m": 0.0343
+        },
+        {
+          "from_kf": 1310,
+          "to_kf": 6304,
+          "fitness": 0.557,
+          "icp_rmse_m": 0.0277
+        },
+        {
+          "from_kf": 245,
+          "to_kf": 5322,
+          "fitness": 0.551,
+          "icp_rmse_m": 0.0291
+        },
+        {
+          "from_kf": 900,
+          "to_kf": 5895,
+          "fitness": 0.493,
+          "icp_rmse_m": 0.0336
+        },
+        {
+          "from_kf": 3520,
+          "to_kf": 8188,
+          "fitness": 0.476,
+          "icp_rmse_m": 0.0268
+        },
+        {
+          "from_kf": 3029,
+          "to_kf": 7696,
+          "fitness": 0.466,
+          "icp_rmse_m": 0.0294
+        },
+        {
+          "from_kf": 3193,
+          "to_kf": 7860,
+          "fitness": 0.464,
+          "icp_rmse_m": 0.0325
+        },
+        {
+          "from_kf": 573,
+          "to_kf": 5649,
+          "fitness": 0.455,
+          "icp_rmse_m": 0.032
+        }
+      ]
+    }
+  },
+  "off": {
+    "footprint_m2": 60.041,
+    "rooms": 6,
+    "bbox_m": [
+      12.645,
+      11.126
+    ],
+    "walls": 34,
+    "total_wall_m": 78.392,
+    "drift": {
+      "method": "none (poses used as-is)",
+      "n_loops": 0,
+      "correction_applied": false,
+      "ablation": {
+        "on": null,
+        "off": null
+      }
+    }
+  },
+  "delta_off_minus_on": {
+    "footprint_m2": -9.122,
+    "footprint_rel_pct": -13.19,
+    "bbox_m": [
+      -0.027,
+      0.006
+    ],
+    "total_wall_m": -9.641
+  }
+}

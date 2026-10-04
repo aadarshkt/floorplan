@@ -1,0 +1,1147 @@
+{
+  "schema_version": "1.0",
+  "capture_id": "c7d28f72c6",
+  "tier": "lidar",
+  "units": "meters",
+  "property": {
+    "footprint_area_m2": {
+      "value": 60.041,
+      "ci95": [
+        58.5153,
+        61.5657
+      ],
+      "method": "sum_of_room_polygons"
+    },
+    "rooms": [
+      "r1",
+      "r2",
+      "r3",
+      "r4",
+      "r5",
+      "r6"
+    ],
+    "adjacency": [
+      {
+        "a": "r1",
+        "b": "r2",
+        "via": "shared_wall"
+      },
+      {
+        "a": "r1",
+        "b": "r3",
+        "via": "shared_wall"
+      },
+      {
+        "a": "r3",
+        "b": "r6",
+        "via": "shared_wall"
+      }
+    ]
+  },
+  "rooms": [
+    {
+      "room_id": "r1",
+      "polygon": [
+        [
+          -0.359,
+          -5.446
+        ],
+        [
+          2.304,
+          -6.875
+        ],
+        [
+          4.606,
+          -2.587
+        ],
+        [
+          3.215,
+          -1.84
+        ],
+        [
+          2.989,
+          -2.261
+        ],
+        [
+          1.718,
+          -1.578
+        ]
+      ],
+      "floor_area_m2": {
+        "value": 14.018,
+        "ci95": [
+          13.6156,
+          14.4206
+        ],
+        "method": "footprint_outline"
+      },
+      "ceiling_height_m": {
+        "value": 3.087,
+        "ci95": [
+          3.0756,
+          3.098
+        ],
+        "method": "bootstrap",
+        "observed": true
+      },
+      "walls": [
+        {
+          "wall_id": "r1-w0",
+          "start": [
+            -0.359,
+            -5.446
+          ],
+          "end": [
+            2.304,
+            -6.875
+          ],
+          "length_m": {
+            "value": 3.0216,
+            "ci95": [
+              2.9606,
+              3.0827
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w1",
+          "start": [
+            2.304,
+            -6.875
+          ],
+          "end": [
+            4.606,
+            -2.587
+          ],
+          "length_m": {
+            "value": 4.8671,
+            "ci95": [
+              4.7998,
+              4.9343
+            ],
+            "method": "bootstrap"
+          },
+          "openings": [
+            {
+              "opening_id": "r1-w1-o0",
+              "type": "door",
+              "position_along_wall_m": 0.7,
+              "width_m": {
+                "value": 0.5602,
+                "ci95": [
+                  0.5402,
+                  0.5802
+                ],
+                "method": "jamb_to_jamb"
+              },
+              "seen_through": true,
+              "sill_m": 0.0,
+              "head_m": 2.0
+            }
+          ]
+        },
+        {
+          "wall_id": "r1-w2",
+          "start": [
+            4.606,
+            -2.587
+          ],
+          "end": [
+            3.215,
+            -1.84
+          ],
+          "length_m": {
+            "value": 1.5789,
+            "ci95": [
+              1.5063,
+              1.6514
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w3",
+          "start": [
+            3.215,
+            -1.84
+          ],
+          "end": [
+            2.989,
+            -2.261
+          ],
+          "length_m": {
+            "value": 0.4772,
+            "ci95": [
+              0.395,
+              0.5593
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w4",
+          "start": [
+            2.989,
+            -2.261
+          ],
+          "end": [
+            1.718,
+            -1.578
+          ],
+          "length_m": {
+            "value": 1.4428,
+            "ci95": [
+              1.3577,
+              1.5279
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r1-w5",
+          "start": [
+            1.718,
+            -1.578
+          ],
+          "end": [
+            -0.359,
+            -5.446
+          ],
+          "length_m": {
+            "value": 4.3899,
+            "ci95": [
+              4.3276,
+              4.4521
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        }
+      ],
+      "damage_regions": [],
+      "concealed_damage_flags": [],
+      "scope_line_items": []
+    },
+    {
+      "room_id": "r2",
+      "polygon": [
+        [
+          3.179,
+          -5.478
+        ],
+        [
+          4.113,
+          -5.979
+        ],
+        [
+          4.251,
+          -5.721
+        ],
+        [
+          6.328,
+          -6.836
+        ],
+        [
+          7.764,
+          -4.162
+        ],
+        [
+          4.754,
+          -2.546
+        ]
+      ],
+      "floor_area_m2": {
+        "value": 10.679,
+        "ci95": [
+          10.3769,
+          10.9817
+        ],
+        "method": "footprint_outline"
+      },
+      "ceiling_height_m": {
+        "value": 3.074,
+        "ci95": [
+          3.0629,
+          3.0857
+        ],
+        "method": "bootstrap",
+        "observed": true
+      },
+      "walls": [
+        {
+          "wall_id": "r2-w6",
+          "start": [
+            3.179,
+            -5.478
+          ],
+          "end": [
+            4.113,
+            -5.979
+          ],
+          "length_m": {
+            "value": 1.0591,
+            "ci95": [
+              1.016,
+              1.1022
+            ],
+            "method": "bootstrap"
+          },
+          "openings": [
+            {
+              "opening_id": "r2-w6-o0",
+              "type": "door",
+              "position_along_wall_m": 0.54,
+              "width_m": {
+                "value": 0.9604,
+                "ci95": [
+                  0.9404,
+                  0.9804
+                ],
+                "method": "jamb_to_jamb"
+              },
+              "seen_through": true,
+              "sill_m": 0.0,
+              "head_m": 2.1
+            }
+          ]
+        },
+        {
+          "wall_id": "r2-w7",
+          "start": [
+            4.113,
+            -5.979
+          ],
+          "end": [
+            4.251,
+            -5.721
+          ],
+          "length_m": {
+            "value": 0.2932,
+            "ci95": [
+              -0.1021,
+              0.6886
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r2-w8",
+          "start": [
+            4.251,
+            -5.721
+          ],
+          "end": [
+            6.328,
+            -6.836
+          ],
+          "length_m": {
+            "value": 2.3574,
+            "ci95": [
+              2.315,
+              2.3997
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r2-w9",
+          "start": [
+            6.328,
+            -6.836
+          ],
+          "end": [
+            7.764,
+            -4.162
+          ],
+          "length_m": {
+            "value": 3.0349,
+            "ci95": [
+              2.9678,
+              3.1021
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r2-w10",
+          "start": [
+            7.764,
+            -4.162
+          ],
+          "end": [
+            4.754,
+            -2.546
+          ],
+          "length_m": {
+            "value": 3.4165,
+            "ci95": [
+              3.3625,
+              3.4705
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r2-w11",
+          "start": [
+            4.754,
+            -2.546
+          ],
+          "end": [
+            3.179,
+            -5.478
+          ],
+          "length_m": {
+            "value": 3.3282,
+            "ci95": [
+              2.9333,
+              3.723
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        }
+      ],
+      "damage_regions": [],
+      "concealed_damage_flags": [],
+      "scope_line_items": []
+    },
+    {
+      "room_id": "r3",
+      "polygon": [
+        [
+          -1.993,
+          -2.146
+        ],
+        [
+          0.786,
+          -3.637
+        ],
+        [
+          2.671,
+          -0.125
+        ],
+        [
+          -0.107,
+          1.366
+        ]
+      ],
+      "floor_area_m2": {
+        "value": 12.569,
+        "ci95": [
+          12.2771,
+          12.8609
+        ],
+        "method": "footprint_outline"
+      },
+      "ceiling_height_m": {
+        "value": 3.064,
+        "ci95": [
+          3.0527,
+          3.0751
+        ],
+        "method": "bootstrap",
+        "observed": true
+      },
+      "walls": [
+        {
+          "wall_id": "r3-w12",
+          "start": [
+            -1.993,
+            -2.146
+          ],
+          "end": [
+            0.786,
+            -3.637
+          ],
+          "length_m": {
+            "value": 3.1534,
+            "ci95": [
+              3.1062,
+              3.2007
+            ],
+            "method": "bootstrap"
+          },
+          "openings": [
+            {
+              "opening_id": "r3-w12-o0",
+              "type": "door",
+              "position_along_wall_m": 2.36,
+              "width_m": {
+                "value": 0.8001,
+                "ci95": [
+                  0.7801,
+                  0.8201
+                ],
+                "method": "jamb_to_jamb"
+              },
+              "seen_through": true,
+              "sill_m": 0.0,
+              "head_m": 2.3
+            }
+          ]
+        },
+        {
+          "wall_id": "r3-w13",
+          "start": [
+            0.786,
+            -3.637
+          ],
+          "end": [
+            2.671,
+            -0.125
+          ],
+          "length_m": {
+            "value": 3.9858,
+            "ci95": [
+              3.9243,
+              4.0473
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r3-w14",
+          "start": [
+            2.671,
+            -0.125
+          ],
+          "end": [
+            -0.107,
+            1.366
+          ],
+          "length_m": {
+            "value": 3.1534,
+            "ci95": [
+              3.1062,
+              3.2007
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r3-w15",
+          "start": [
+            -0.107,
+            1.366
+          ],
+          "end": [
+            -1.993,
+            -2.146
+          ],
+          "length_m": {
+            "value": 3.9858,
+            "ci95": [
+              3.9243,
+              4.0473
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        }
+      ],
+      "damage_regions": [],
+      "concealed_damage_flags": [],
+      "scope_line_items": []
+    },
+    {
+      "room_id": "r4",
+      "polygon": [
+        [
+          -4.881,
+          -7.473
+        ],
+        [
+          -2.395,
+          -8.808
+        ],
+        [
+          -2.628,
+          -9.242
+        ],
+        [
+          -1.663,
+          -9.76
+        ],
+        [
+          0.135,
+          -6.411
+        ],
+        [
+          -0.787,
+          -5.917
+        ],
+        [
+          -1.089,
+          -6.48
+        ],
+        [
+          -2.625,
+          -5.656
+        ],
+        [
+          -2.818,
+          -6.015
+        ],
+        [
+          -3.812,
+          -5.481
+        ]
+      ],
+      "floor_area_m2": {
+        "value": 11.202,
+        "ci95": [
+          10.8819,
+          11.5216
+        ],
+        "method": "footprint_outline"
+      },
+      "ceiling_height_m": {
+        "value": 2.409,
+        "ci95": [
+          2.3977,
+          2.42
+        ],
+        "method": "bootstrap",
+        "observed": true
+      },
+      "walls": [
+        {
+          "wall_id": "r4-w16",
+          "start": [
+            -4.881,
+            -7.473
+          ],
+          "end": [
+            -2.395,
+            -8.808
+          ],
+          "length_m": {
+            "value": 2.8223,
+            "ci95": [
+              2.7715,
+              2.8731
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r4-w17",
+          "start": [
+            -2.395,
+            -8.808
+          ],
+          "end": [
+            -2.628,
+            -9.242
+          ],
+          "length_m": {
+            "value": 0.4932,
+            "ci95": [
+              0.4361,
+              0.5503
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r4-w18",
+          "start": [
+            -2.628,
+            -9.242
+          ],
+          "end": [
+            -1.663,
+            -9.76
+          ],
+          "length_m": {
+            "value": 1.0949,
+            "ci95": [
+              1.051,
+              1.1389
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r4-w19",
+          "start": [
+            -1.663,
+            -9.76
+          ],
+          "end": [
+            0.135,
+            -6.411
+          ],
+          "length_m": {
+            "value": 3.8009,
+            "ci95": [
+              3.73,
+              3.8717
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r4-w20",
+          "start": [
+            0.135,
+            -6.411
+          ],
+          "end": [
+            -0.787,
+            -5.917
+          ],
+          "length_m": {
+            "value": 1.0458,
+            "ci95": [
+              1.0005,
+              1.0912
+            ],
+            "method": "bootstrap"
+          },
+          "openings": [
+            {
+              "opening_id": "r4-w20-o0",
+              "type": "door",
+              "position_along_wall_m": 0.573,
+              "width_m": {
+                "value": 0.9459,
+                "ci95": [
+                  0.9259,
+                  0.9659
+                ],
+                "method": "jamb_to_jamb"
+              },
+              "seen_through": true,
+              "sill_m": 0.0,
+              "head_m": 1.9
+            }
+          ]
+        },
+        {
+          "wall_id": "r4-w21",
+          "start": [
+            -0.787,
+            -5.917
+          ],
+          "end": [
+            -1.089,
+            -6.48
+          ],
+          "length_m": {
+            "value": 0.6391,
+            "ci95": [
+              0.5649,
+              0.7134
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r4-w22",
+          "start": [
+            -1.089,
+            -6.48
+          ],
+          "end": [
+            -2.625,
+            -5.656
+          ],
+          "length_m": {
+            "value": 1.743,
+            "ci95": [
+              1.688,
+              1.7979
+            ],
+            "method": "bootstrap"
+          },
+          "openings": [
+            {
+              "opening_id": "r4-w22-o0",
+              "type": "door",
+              "position_along_wall_m": 0.61,
+              "width_m": {
+                "value": 0.821,
+                "ci95": [
+                  0.801,
+                  0.841
+                ],
+                "method": "jamb_to_jamb"
+              },
+              "seen_through": true,
+              "sill_m": 0.0,
+              "head_m": 1.8
+            }
+          ]
+        },
+        {
+          "wall_id": "r4-w23",
+          "start": [
+            -2.625,
+            -5.656
+          ],
+          "end": [
+            -2.818,
+            -6.015
+          ],
+          "length_m": {
+            "value": 0.4077,
+            "ci95": [
+              0.3496,
+              0.4658
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r4-w24",
+          "start": [
+            -2.818,
+            -6.015
+          ],
+          "end": [
+            -3.812,
+            -5.481
+          ],
+          "length_m": {
+            "value": 1.1285,
+            "ci95": [
+              1.058,
+              1.199
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r4-w25",
+          "start": [
+            -3.812,
+            -5.481
+          ],
+          "end": [
+            -4.881,
+            -7.473
+          ],
+          "length_m": {
+            "value": 2.2608,
+            "ci95": [
+              2.2042,
+              2.3174
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        }
+      ],
+      "damage_regions": [],
+      "concealed_damage_flags": [],
+      "scope_line_items": []
+    },
+    {
+      "room_id": "r5",
+      "polygon": [
+        [
+          2.769,
+          -8.483
+        ],
+        [
+          4.899,
+          -9.627
+        ],
+        [
+          6.055,
+          -7.472
+        ],
+        [
+          3.925,
+          -6.329
+        ]
+      ],
+      "floor_area_m2": {
+        "value": 5.911,
+        "ci95": [
+          5.6932,
+          6.1284
+        ],
+        "method": "footprint_outline"
+      },
+      "ceiling_height_m": {
+        "value": 2.34,
+        "ci95": [
+          2.3289,
+          2.3513
+        ],
+        "method": "bootstrap",
+        "observed": true
+      },
+      "walls": [
+        {
+          "wall_id": "r5-w26",
+          "start": [
+            2.769,
+            -8.483
+          ],
+          "end": [
+            4.899,
+            -9.627
+          ],
+          "length_m": {
+            "value": 2.4175,
+            "ci95": [
+              2.3492,
+              2.4859
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r5-w27",
+          "start": [
+            4.899,
+            -9.627
+          ],
+          "end": [
+            6.055,
+            -7.472
+          ],
+          "length_m": {
+            "value": 2.445,
+            "ci95": [
+              2.3931,
+              2.4969
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r5-w28",
+          "start": [
+            6.055,
+            -7.472
+          ],
+          "end": [
+            3.925,
+            -6.329
+          ],
+          "length_m": {
+            "value": 2.4175,
+            "ci95": [
+              2.3492,
+              2.4859
+            ],
+            "method": "bootstrap"
+          },
+          "openings": [
+            {
+              "opening_id": "r5-w28-o0",
+              "type": "door",
+              "position_along_wall_m": 1.948,
+              "width_m": {
+                "value": 0.8442,
+                "ci95": [
+                  0.8242,
+                  0.8642
+                ],
+                "method": "jamb_to_jamb"
+              },
+              "seen_through": true,
+              "sill_m": 0.0,
+              "head_m": 2.1
+            }
+          ]
+        },
+        {
+          "wall_id": "r5-w29",
+          "start": [
+            3.925,
+            -6.329
+          ],
+          "end": [
+            2.769,
+            -8.483
+          ],
+          "length_m": {
+            "value": 2.445,
+            "ci95": [
+              2.3931,
+              2.4969
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        }
+      ],
+      "damage_regions": [],
+      "concealed_damage_flags": [],
+      "scope_line_items": []
+    },
+    {
+      "room_id": "r6",
+      "polygon": [
+        [
+          -3.292,
+          -4.532
+        ],
+        [
+          -1.556,
+          -5.464
+        ],
+        [
+          -0.198,
+          -2.932
+        ],
+        [
+          -1.933,
+          -2.001
+        ]
+      ],
+      "floor_area_m2": {
+        "value": 5.658,
+        "ci95": [
+          5.4914,
+          5.8254
+        ],
+        "method": "footprint_outline"
+      },
+      "ceiling_height_m": {
+        "value": 2.266,
+        "ci95": [
+          2.2549,
+          2.2805
+        ],
+        "method": "bootstrap",
+        "observed": true
+      },
+      "walls": [
+        {
+          "wall_id": "r6-w30",
+          "start": [
+            -3.292,
+            -4.532
+          ],
+          "end": [
+            -1.556,
+            -5.464
+          ],
+          "length_m": {
+            "value": 1.9694,
+            "ci95": [
+              1.9207,
+              2.0181
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r6-w31",
+          "start": [
+            -1.556,
+            -5.464
+          ],
+          "end": [
+            -0.198,
+            -2.932
+          ],
+          "length_m": {
+            "value": 2.8732,
+            "ci95": [
+              2.8323,
+              2.9142
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r6-w32",
+          "start": [
+            -0.198,
+            -2.932
+          ],
+          "end": [
+            -1.933,
+            -2.001
+          ],
+          "length_m": {
+            "value": 1.9694,
+            "ci95": [
+              1.9207,
+              2.0181
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        },
+        {
+          "wall_id": "r6-w33",
+          "start": [
+            -1.933,
+            -2.001
+          ],
+          "end": [
+            -3.292,
+            -4.532
+          ],
+          "length_m": {
+            "value": 2.8732,
+            "ci95": [
+              2.8323,
+              2.9142
+            ],
+            "method": "bootstrap"
+          },
+          "openings": []
+        }
+      ],
+      "damage_regions": [],
+      "concealed_damage_flags": [],
+      "scope_line_items": []
+    }
+  ],
+  "drift": {
+    "method": "none (poses used as-is)",
+    "n_loops": 0,
+    "correction_applied": false,
+    "ablation": {
+      "on": null,
+      "off": null
+    }
+  },
+  "scale": {
+    "scale_reference": "native_metric",
+    "scale_factor": 1.0,
+    "metric": true,
+    "ci95_rel": 0.0
+  },
+  "confidence": {
+    "calibration_factor": 1.0,
+    "method": "bootstrap+propagation"
+  },
+  "artifacts": {
+    "svg": "floor_plan.svg",
+    "dxf": "floor_plan.dxf",
+    "pointcloud": "scan_metric.ply"
+  }
+}
