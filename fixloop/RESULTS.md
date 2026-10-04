@@ -42,7 +42,7 @@ Other: rooms found on study_room_friend 2 -> 1; its footprint 13.49 -> 9.69 m2
 - Wall `wall_length_abs_cm` (3 cm per wall): still fails everywhere (study: 3.6 and 5.6).
   So the capture-level wall gate is **not** passed. Movement is large; the gate is not met.
 - Repeatability (kitchen pair) got worse, not better: before 2.0 cm max (consistently
-  wrong), after 25.2 cm in run 1 and larger in run 2. See below.
+  wrong), after 25.2 cm in run 1 and 73.4 cm in run 2. See below.
 - Openings, ceiling, CI coverage (15 % -> 40 %, target 85 %) not fixed.
 
 ## Prediction vs result (honest)
