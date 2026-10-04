@@ -1,0 +1,12 @@
+{
+  "units": "meters",
+  "captures": [
+    {
+      "id": "kitchen_room_scan",
+      "path": "captures/kitchen_room_scan",
+      "tier": "lidar",
+      "room_id": "r1",
+      "ground_truth": "ground_truth/kitchen_room_scan.json"
+    }
+  ]
+}
