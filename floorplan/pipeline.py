@@ -167,14 +167,18 @@ def _run_photo_video(capture_path: str | Path, out: Path, cfg: Settings,
         if sfm is None:
             failures.append("colmap: no reconstruction")
         else:
-            pts, s, ref, notes = scale.anchor(sfm.points, cfg, reference_points)
+            # anchor() orients the cloud upright and returns the camera centres and
+            # up vector in that same frame (notes["prealigned"] tells the tail to
+            # skip its own alignment), so the raw SfM ones must not override them.
+            pts, s, ref, notes = scale.anchor(sfm.points, cfg, reference_points,
+                                              up_hint=sfm.up_hint,
+                                              camera_centres=sfm.centres)
             candidates.append(Reconstruction(
                 points=pts, tier=tier, path_chosen=f"colmap:{sfm.dense}",
                 scale_reference=ref, scale_factor=s, conf=sfm.conf,
-                notes={**notes, "registered": sfm.n_registered, "images": sfm.n_images,
-                       "points_raw": sfm.n_points, "camera_centres": sfm.centres,
-                       "camera_names": [im.name for im in sfm.images],
-                       "up_hint": sfm.up_hint}))
+                notes={"registered": sfm.n_registered, "images": sfm.n_images,
+                       "points_raw": sfm.n_points,
+                       "camera_names": [im.name for im in sfm.images], **notes}))
 
     timings["fusion"] = time.time() - t0
     if not candidates:

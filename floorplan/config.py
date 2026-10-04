@@ -123,6 +123,12 @@ class Settings:
     depth_scale_sys_rel_uncal: float = 0.20 # 95% systematic scale error, other framings
     depth_store_dim: int = 640        # long side of each stored depth map (memory bound)
     depth_edge_tol: float = 0.06      # drop pixels whose depth jumps more than this per px (relative)
+    # Per-frame keypoint scales still wobble ~11 % between frames (parallel wall
+    # sheets); a joint solve over neighbouring frames' dense depth removes most of it.
+    depth_joint_scale: bool = True
+    depth_joint_neighbours: int = 4   # sequence neighbours on each side linked in the solve
+    depth_joint_prior: float = 0.2    # weight pulling each frame to its keypoint scale
+    depth_parallax_level: bool = True # set the overall depth level from wide-baseline agreement
     scale_ref_m: float | None = None  # known real-world length for scale anchoring
     scale_ref_kind: str = "door_width"
     default_ceiling_m: float = 2.5    # fallback when the ceiling was never observed
@@ -132,7 +138,7 @@ class Settings:
     video_max_frames: int = 120       # keyframe cap; long walks get a lower effective rate
     video_max_dim: int = 1280         # keyframe long side (memory/CPU bound on 8 GB laptops)
     threads: int = 4                  # CPU threads for COLMAP / torch (keep the laptop usable)
-    colmap_exhaustive_max: int = 60   # exhaustive matching below this many images
+    colmap_exhaustive_max: int = 150  # exhaustive matching below this many images
     sfm_features: str = "sift"        # sift | aliked (ALIKED + LightGlue, COLMAP >= 3.13)
     sfm_sift_peak: float = 0.002      # SIFT contrast threshold (COLMAP 0.0067): more keypoints on plain walls
     sfm_max_features: int = 4096      # ALIKED keypoints per image
@@ -142,7 +148,19 @@ class Settings:
     sfm_seq_overlap: int = 20         # sequential matcher: neighbours per image
     sfm_global_min_images: int = 30   # below this, incremental mapping
     sfm_init_min_tri_angle: float = 8.0   # handheld clips have little parallax (COLMAP default 16)
-    colmap_dense: bool = True         # attempt dense MVS (needs CUDA); else sparse
+    sfm_min_registered_fraction: float = 0.60   # fraction of images one connected model must register
+    colmap_recovery_exhaustive_max: int = 400   # registration recovery: all-pairs matching up to this many images
+    colmap_sequential_overlap: int = 20
+    colmap_init_min_tri_angle: float = 4.0      # short indoor baselines; reprojection checks stay on
+    colmap_sift_max_image_size: int = 2400
+    colmap_features: str = "auto"     # auto (GPU, CPU recovery on failure) | gpu (required) | cpu
+    colmap_global_recovery: bool = True
+    colmap_dense: bool = True         # dense MVS through CUDA/HIP; CPU plane-sweep fallback
+    colmap_dense_mode: str = "auto"   # auto | gpu (required) | cpu
+    colmap_gpu_index: str = "0"
+    colmap_max_image_size: int = 1600
+    colmap_cache_gb: float = 2.0
+    colmap_fusion_min_pixels: int = 3  # reference + two consistent views
     mvs_enable: bool = True           # CPU plane-sweep densification from SfM poses
     mvs_max_dim: int = 192            # working resolution (longest image side)
     mvs_neighbors: int = 6            # source views per reference image
