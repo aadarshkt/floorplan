@@ -5,7 +5,7 @@
   "date": "2026-10-04",
   "ceiling_height_m": 2.858,
   "wall_lengths_m": [3.23, 2.24, 3.23, 2.24],
-  "notes": "Long axis 3.23 m is wall to wall. Full-height cabinets stand against both short ends: 63.9 cm deep at the start and 30.9 cm at the end, so the clear length between cabinet faces is 2.282 m. Earlier value 3.44 m was replaced on 2026-10-04.",
+  "notes": "Long axis 3.23 m is wall to wall. Full-height cabinets stand against both short ends: 63.9 cm deep at the start and 30.9 cm at the end, so the clear length between cabinet faces is 2.282 m. Short axis 2.24 m is wall to wall; short full-height pillars (10.8 cm and 10.4 cm deep) sit on both walls, so the clear width between them is 2.028 m. Earlier value 3.44 m was replaced on 2026-10-04.",
   "openings": [
     { "type": "door", "width_m": 0.92 },
     { "type": "door", "width_m": 0.655 },
