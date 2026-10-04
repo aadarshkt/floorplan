@@ -6,6 +6,117 @@ confidence intervals: `results.json` (published schema), `floor_plan.svg`,
 
 Local, deterministic, offline CLI. No server, no cloud.
 
+## Quickstart: from clone to results
+
+Tested on macOS (Apple Silicon). Needs Homebrew, `uv` and Python 3.11. No GPU, no cloud, no account.
+
+**1. Install** (download time dominates)
+
+```bash
+git clone https://github.com/aadarshkt/floorplan && cd floorplan
+brew install ffmpeg colmap libusb
+uv venv --python 3.11 .venv && uv pip install -e .
+```
+
+**2. Get a capture.** Either record your own with *Stray Scanner* (see
+[`CAPTURE_PROTOCOL.md`](CAPTURE_PROTOCOL.md): iPhone Pro, free app, zip the recording), or use ours:
+download `raw_benchmark_data/` from the Drive link in the submission email, then
+
+```bash
+for c in kitchen_room_scan kitchen_scan_2 bedroom_2 study_room_friend; do
+  unzip raw_benchmark_data/captures/$c.zip -d benchmark/captures/$c
+done
+```
+
+**3. Run one command per capture**
+
+```bash
+./.venv/bin/floorplan run benchmark/captures/study_room_friend --out out/study     # a folder
+./.venv/bin/floorplan run my_stray_scanner_capture.zip --out out/mine              # or a .zip
+```
+
+About 20 s on an M1. The last lines should read like (study room, tape: 9.98 m2, ceiling 2.836 m):
+
+```
+[drift] 120 keyframes, 80 candidates, 10 ICP-verified loops
+[geometry] planes=40 walls=8 rooms=1 openings=1 footprint=9.747 m2 ceiling=2.845 m observed=True
+[done] out/study  (total ~18s)
+```
+
+**4. Look at the result**
+
+```bash
+open out/study/floor_plan.svg          # the plan: wall lengths with 95% intervals, openings, area, ceiling
+./.venv/bin/python - <<'EOF'
+import json
+r = json.load(open("out/study/results.json"))["rooms"][0]
+print("ceiling", r["ceiling_height_m"]["value"], r["ceiling_height_m"]["ci95"])
+print("area   ", r["floor_area_m2"]["value"], r["floor_area_m2"]["ci95"])
+for w in r["walls"]:
+    print(w["wall_id"], w["length_m"]["value"], w["length_m"]["ci95"], "openings:", len(w["openings"]))
+EOF
+```
+
+Compare those numbers with your own laser or tape. [`TESTING.md`](TESTING.md) is the one-page
+scoring guide (which field to compare, what counts as a pass).
+
+**5. Reproduce the reported benchmark** (needs the unzipped captures from step 2; about 2 minutes)
+
+```bash
+./.venv/bin/python -m floorplan.cli bench --manifest benchmark/manifest.stray.json \
+    --out benchmark/reports/stray --runs benchmark/runs/stray --force
+cat benchmark/reports/stray/report.md      # expect: Accuracy 26% (6/23), 0/4 captures pass all gates
+```
+
+Reproduce the **fix loop** (worst gate before and after, wall-length error 161.4 cm to 5.6 cm on `study_room_friend`):
+
+```bash
+git checkout fixloop-before   # code before the fix
+./.venv/bin/python -m floorplan.cli bench --manifest benchmark/manifest.stray.json \
+    --out benchmark/reports/fixloop_before --runs benchmark/runs/fixloop_before --force
+git checkout main             # code after the fix
+./.venv/bin/python -m floorplan.cli bench --manifest benchmark/manifest.stray.json \
+    --out benchmark/reports/fixloop_after --runs benchmark/runs/fixloop_after --force
+```
+
+Run `python -m floorplan.cli` (not the installed `floorplan` script) when switching checkouts. Story and
+post-mortem: [`fixloop/RESULTS.md`](fixloop/RESULTS.md).
+
+Drift correction on vs off on the multi-room assignment sample:
+
+```bash
+./.venv/bin/python -m floorplan.cli drift-ablate <path>/Assignment/c7d28f72c6 --out out/ablation
+open out/ablation/drift_overlay.svg
+```
+
+Tests: `./.venv/bin/python -m pytest -q` (32 pass).
+
+**Video tier (optional, slower, needs a known ceiling height for scale)**
+
+```bash
+scripts/fetch_weights.sh      # torch + transformers; the depth model (~100 MB) downloads on first use
+./.venv/bin/floorplan run walk.mov --out out/video --scale-ref 2.60 --scale-ref-kind ceiling_height
+```
+
+Add `--max-frames` or `--fps 1` for a quick smoke test. Video is **not** accurate yet (see below).
+
+### What works, honestly
+
+| Tier | State |
+|---|---|
+| LiDAR (Stray Scanner zip) | Runs end to end. Best wall error 5.6 cm; no capture passes all gates; doors and windows mostly missed |
+| Video | Runs, but 0 of 4 rooms usable (wall errors 1 to 2 m) |
+| Photos | Not delivered as a tier |
+| Damage, scope, head-to-head | Not built |
+
+Numbers and gates: [`BENCHMARK_REPORT.md`](BENCHMARK_REPORT.md). Requirement-by-requirement status:
+[`COMPLIANCE.md`](COMPLIANCE.md). Architecture and fix-loop story: [`REPORT.md`](REPORT.md). Everything in order:
+[`SUBMISSION.md`](SUBMISSION.md).
+
+---
+
+## Reference (older detail)
+
 ## Install (clean machine)
 
 ```bash
@@ -13,7 +124,7 @@ Local, deterministic, offline CLI. No server, no cloud.
 brew install ffmpeg colmap     # video frames; photos/video reconstruction (SfM)
 brew install libusb            # required by open3d on macOS
 uv venv --python 3.11 .venv    # or: python3.11 -m venv .venv
-uv pip install -e .            # or: ./.venv/bin/pip install -e .   (includes lzfse for .r3d)
+uv pip install -e .            # or: ./.venv/bin/pip install -e .   (includes lzfse)
 
 # Optional learned monocular-depth backend for the photos/video tiers:
 scripts/fetch_weights.sh
@@ -205,22 +316,15 @@ video    ─┘                                   ├ lidar : depth+pose fusion
 ## Test & analyse
 
 ```bash
-# 1. score every capture in the manifest
-./.venv/bin/floorplan bench --manifest benchmark/manifest.json --out benchmark
-
-# 2. read the result
-cat benchmark/selftest/report.md      # per-capture gate table + the single accuracy number
-cat benchmark/selftest/gates.json     # the same, machine-readable
+# score every capture in a manifest against tape/laser ground truth
+./.venv/bin/python -m floorplan.cli bench --manifest benchmark/manifest.stray.json \
+    --out benchmark/reports/stray --runs benchmark/runs/stray --force
+cat benchmark/reports/stray/report.md      # per-capture gate table + the single accuracy number
 ```
 
-`report.md` leads with the one number that matters:
-
-```
-Accuracy: NN%   (within/total measurements within tolerance)
-```
-
-See `benchmark/README.md` for the full walkthrough. `IMPLEMENTATION_PLAN.md` has
-the design, benchmark plan and fix-loop mechanics.
+`benchmark/selftest/` is a harness self-test whose ground truth was copied from the pipeline's own
+output; its 100 % is not an accuracy result. See `benchmark/README.md` for the full walkthrough.
+`IMPLEMENTATION_PLAN.md` is the original design.
 
 ## Tests
 
