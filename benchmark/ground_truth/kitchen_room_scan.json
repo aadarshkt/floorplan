@@ -7,7 +7,7 @@
   "wall_lengths_m": [3.44, 2.24, 3.44, 2.24],
   "openings": [
     { "type": "door", "width_m": 0.92 },
-    { "type": "door", "width_m": 0.74 },
+    { "type": "door", "width_m": 0.655 },
     { "type": "window", "width_m": 1.20 }
   ]
 }
