@@ -40,16 +40,19 @@ def _rot(theta: float) -> np.ndarray:
 
 
 def _band(points: np.ndarray, floor_z: float, ceil_z: float, observed: bool,
-          cell: float = 0.02) -> np.ndarray:
+          cell: float = 0.02, top_margin: float = 0.08) -> np.ndarray:
     """Wall evidence: vertical-surface points above furniture height.
 
     Points whose normal is horizontal, from 0.9 m above the floor to just below
     the ceiling (or the top of the cloud when the ceiling was not seen). Most
     furniture (beds, tables, sofas) is lower; walls run the full height.
+    ``top_margin`` keeps the band clear of soffits, beams and pillars that sit
+    at the very top of a wall.
     """
     import open3d as o3d
     z = points[:, 2]
-    top = ceil_z - 0.08 if observed else float(np.percentile(z, 99.5))
+    top = (max(ceil_z - top_margin, floor_z + 1.3) if observed
+           else float(np.percentile(z, 99.5)))
     sel = points[(z >= floor_z + 0.9) & (z <= top)]
     if len(sel) < 50:
         return sel
@@ -160,21 +163,62 @@ def _rectilinear(verts: np.ndarray, min_edge: float) -> np.ndarray:
         k = int(np.argmin(seg))
         if seg[k] >= min_edge:
             return v
-        # remove a short edge k (v[k] -> v[k+1]): collapse it onto its neighbours
+        v = _collapse(v, k)
+    return v
+
+
+def _collapse(v: np.ndarray, k: int) -> np.ndarray:
+    """Remove edge k (v[k] -> v[k+1]) by collapsing it onto its neighbours."""
+    v = v.copy()
+    n = len(v)
+    a, b = v[k], v[(k + 1) % n]
+    p, q = v[k - 1], v[(k + 2) % n]
+    horiz = abs(b[1] - a[1]) < 1e-9          # short edge runs along x
+    if horiz:   # neighbours are vertical: put both at the length-weighted x
+        lp, lq = abs(a[1] - p[1]), abs(q[1] - b[1])
+        x = (a[0] * lp + b[0] * lq) / max(lp + lq, 1e-9)
+        v[k - 1] = [x, p[1]]
+        v[(k + 2) % n] = [x, q[1]]
+    else:
+        lp, lq = abs(a[0] - p[0]), abs(q[0] - b[0])
+        y = (a[1] * lp + b[1] * lq) / max(lp + lq, 1e-9)
+        v[k - 1] = [p[0], y]
+        v[(k + 2) % n] = [q[0], y]
+    return np.delete(v, [k, (k + 1) % n], axis=0)
+
+
+def _support(v: np.ndarray, band_xy: np.ndarray, tol: float = 0.12) -> np.ndarray:
+    """Share of each edge's length backed by wall points within ``tol`` of its line."""
+    n = len(v)
+    out = np.zeros(n)
+    for k in range(n):
         a, b = v[k], v[(k + 1) % n]
-        p, q = v[k - 1], v[(k + 2) % n]
-        horiz = abs(b[1] - a[1]) < 1e-9          # short edge runs along x
-        if horiz:   # neighbours are vertical: put both at the length-weighted x
-            lp, lq = abs(a[1] - p[1]), abs(q[1] - b[1])
-            x = (a[0] * lp + b[0] * lq) / max(lp + lq, 1e-9)
-            v[k - 1] = [x, p[1]]
-            v[(k + 2) % n] = [x, q[1]]
-        else:
-            lp, lq = abs(a[0] - p[0]), abs(q[0] - b[0])
-            y = (a[1] * lp + b[1] * lq) / max(lp + lq, 1e-9)
-            v[k - 1] = [p[0], y]
-            v[(k + 2) % n] = [q[0], y]
-        v = np.delete(v, [k, (k + 1) % n], axis=0)
+        horiz = abs(b[1] - a[1]) < 1e-9
+        ax, cross = (0, 1) if horiz else (1, 0)
+        lo, hi = sorted([a[ax], b[ax]])
+        if hi - lo < 1e-6:
+            continue
+        m = ((band_xy[:, ax] > lo) & (band_xy[:, ax] < hi)
+             & (np.abs(band_xy[:, cross] - a[cross]) < tol))
+        nb = max(1, int(np.ceil((hi - lo) / 0.05)))
+        h, _ = np.histogram(band_xy[m, ax], bins=nb, range=(lo, hi))
+        out[k] = float((h > 0).mean())
+    return out
+
+
+def _drop_unsupported(v: np.ndarray, band_xy: np.ndarray, cfg: Settings) -> np.ndarray:
+    """Collapse short outline edges that no wall points back (leaks, notches)."""
+    for _ in range(len(v)):
+        if len(v) <= 4:
+            break
+        sup = _support(v, band_xy)
+        seg = np.linalg.norm(np.roll(v, -1, axis=0) - v, axis=1)
+        cand = [k for k in range(len(v))
+                if sup[k] < cfg.layout_min_support and seg[k] < cfg.layout_drop_len_m]
+        if not cand:
+            break
+        k = min(cand, key=lambda i: seg[i])
+        v = _rectilinear(_collapse(v, k), 1e-9)
     return v
 
 
@@ -190,8 +234,8 @@ def _inside(pt: np.ndarray, poly: np.ndarray) -> bool:
     return inside
 
 
-def _refine(v: np.ndarray, band_xy: np.ndarray, search: float
-            ) -> tuple[np.ndarray, np.ndarray]:
+def _refine(v: np.ndarray, band_xy: np.ndarray, search: float,
+            cover: float | None = None) -> tuple[np.ndarray, np.ndarray]:
     """Snap each axis-aligned edge to the inside face of its wall.
 
     The free-space boundary stops at the first obstacle, a few cm to tens of cm
@@ -199,6 +243,11 @@ def _refine(v: np.ndarray, band_xy: np.ndarray, search: float
     little inward), the wall face is the first dense layer of wall points; the
     edge moves to the median of that layer. Also returns each edge's spread
     (1.4826 x MAD of the layer's offsets), used for the length interval.
+
+    With ``cover`` set, the wall is instead the OUTERMOST layer that backs at
+    least that share of the edge's length: a cabinet or pillar in front of the
+    wall covers only part of it or sits in front of it, while the wall plane
+    runs the whole edge. Falls back to the first dense layer when none does.
     """
     n = len(v)
     v = v.copy()
@@ -216,13 +265,29 @@ def _refine(v: np.ndarray, band_xy: np.ndarray, search: float
         sign = -1.0 if _inside(probe, v) else 1.0
         m = (band_xy[:, ax] > lo + 0.1) & (band_xy[:, ax] < hi - 0.1)
         off = (band_xy[m, cross] - c) * sign          # >0: outward
-        off = off[(off > -0.08) & (off < search)]
+        along = band_xy[m, ax]
+        sel = (off > -0.08) & (off < search)
+        off, along = off[sel], along[sel]
         if len(off) < 30:
             pos.append(c)
             spread.append(search / 2)          # unsupported edge: wide
             continue
         hist, edges = np.histogram(off, bins=np.arange(-0.08, search + 0.02, 0.02))
         first = int(np.nonzero(hist >= 0.3 * hist.max())[0].min())
+        if cover is not None and hi - lo > 0.4:
+            nb = max(1, int(np.ceil((hi - lo - 0.2) / 0.05)))
+            covered = np.zeros(len(hist), dtype=bool)
+            for i in np.nonzero(hist >= 0.1 * hist.max())[0]:
+                s = (off >= edges[i] - 0.04) & (off <= edges[i + 1] + 0.04)   # ~10 cm slab
+                h, _ = np.histogram(along[s], bins=nb, range=(lo + 0.1, hi - 0.1))
+                covered[i] = (h > 0).mean() >= cover
+            if covered.any():
+                top = int(np.nonzero(covered)[0].max())    # outermost covered bin
+                lo_i = top                                  # its contiguous dense run
+                while lo_i > 0 and covered[lo_i - 1] and hist[lo_i - 1] >= 0.1 * hist.max():
+                    lo_i -= 1
+                run = hist[lo_i:top + 1]
+                first = lo_i + int(np.nonzero(run >= 0.3 * run.max())[0].min())   # inner face
         layer = off[(off >= edges[first] - 0.02) & (off <= edges[first + 1] + 0.04)]
         med = float(np.median(layer))
         pos.append(c + sign * med)
@@ -238,7 +303,9 @@ def _refine(v: np.ndarray, band_xy: np.ndarray, search: float
 
 def rooms(points: np.ndarray, floor_z: float, ceil_z: float, observed: bool,
           cams_xy: np.ndarray | None, theta: float, cfg: Settings) -> list[np.ndarray]:
-    band = _band(points, floor_z, ceil_z, observed)
+    fix = cfg.layout_wall_support
+    band = _band(points, floor_z, ceil_z, observed,
+                 top_margin=cfg.layout_band_top_m if fix else 0.08)
     if len(band) < 200:
         return []
     th = dominant_angle(_LAST_NORMALS)
@@ -328,12 +395,26 @@ def rooms(points: np.ndarray, floor_z: float, ceil_z: float, observed: bool,
         verts = _rectilinear(verts, cfg.layout_min_edge)
         if len(verts) < 4:
             continue
-        verts, _ = _refine(verts, bxy, cfg.layout_refine_m)
+        search = cfg.layout_refine_far_m if fix else cfg.layout_refine_m
+        cover = cfg.layout_layer_cover if fix else None
+        verts, _ = _refine(verts, bxy, search, cover)
         # snapping can create tiny jogs; clean up and snap once more
         verts = _rectilinear(verts, cfg.layout_min_edge)
         if len(verts) < 4:
             continue
-        verts, spread = _refine(verts, bxy, cfg.layout_refine_m / 2)
+        verts, spread = _refine(verts, bxy, search / 2, cover)
+        if fix:
+            # outline edges no wall points back are leaks/notches, not walls
+            n0 = len(verts)
+            verts = _drop_unsupported(verts, bxy, cfg)
+            if len(verts) < 4:
+                continue
+            if len(verts) != n0:
+                verts, spread = _refine(verts, bxy, search / 2, cover)
+            if out:     # the camera-holding room is always kept; extras must be walled
+                seg = np.linalg.norm(np.roll(verts, -1, axis=0) - verts, axis=1)
+                if float((_support(verts, bxy) * seg).sum() / seg.sum()) < cfg.layout_room_support:
+                    continue
         verts = verts @ R                              # back to world XY
         x, y = verts[:, 0], verts[:, 1]
         if np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1)) < 0:

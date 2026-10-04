@@ -73,6 +73,14 @@ class Settings:
     layout_min_edge: float = 0.25     # drop wall jogs shorter than this
     layout_refine_m: float = 0.40     # how far outward to look for the wall face when snapping an edge
     layout_multi_room: bool = True    # every camera-visited free-space component is a room
+    # wall-support fix (fixloop/DECLARATION.md); False reproduces the before-run
+    layout_wall_support: bool = True
+    layout_band_top_m: float = 0.5    # wall band stops this far below the ceiling (soffits, beams)
+    layout_refine_far_m: float = 0.8  # farther search for the wall face behind cabinets/pillars
+    layout_layer_cover: float = 0.5   # a wall layer must back this share of an edge's length
+    layout_min_support: float = 0.35  # edges backed by less than this are "unsupported"
+    layout_drop_len_m: float = 1.0    # ...and are dropped from the outline when shorter than this
+    layout_room_support: float = 0.45 # extra rooms backed by less of their perimeter are leaks
 
     # ── drift correction ─────────────────────────────────────────────────────
     drift_correction: bool = True      # keyframe pose graph with ICP-verified loops (drift.py)
