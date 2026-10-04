@@ -281,12 +281,29 @@ def fuse(capture: record3d.Record3DCapture, cfg: Settings, verbose: bool = False
         pcd, _ = pcd.remove_statistical_outlier(
             nb_neighbors=cfg.stat_nb_neighbors, std_ratio=cfg.stat_std_ratio
         )
+    pcd = canonical_order(pcd)
     if verbose:
         bb = pcd.get_axis_aligned_bounding_box()
         print(f"[fusion] convention={convention} frames={len(idxs)} px_stride={px} "
               f"pts_raw={len(pts)} pts_clean={len(pcd.points)}")
         print(f"[fusion] bbox extent={np.round(bb.get_extent(), 3)} (Z is up)")
     return pcd
+
+
+def canonical_order(pcd: o3d.geometry.PointCloud) -> o3d.geometry.PointCloud:
+    """Quantize to 0.1 mm and sort lexicographically (x, y, z).
+
+    Open3D's voxel_down_sample walks a hash map, so the same set of points comes
+    back in a different order on every run, and its parallel voxel averages differ
+    in the last float bits (~1e-14 m). Normals, the dominant wall angle and plane
+    sampling all read the cloud in order, and the grid layout amplifies the tiny
+    differences, so the same capture gave different plans. Rounding removes the
+    float noise (the sensor resolves 1 mm) and a fixed order makes every later
+    stage a function of the point set only.
+    """
+    p = np.round(np.asarray(pcd.points), 4)
+    order = np.lexsort(p.T[::-1])
+    return o3d.geometry.PointCloud(o3d.utility.Vector3dVector(p[order]))
 
 
 # ── optional TSDF fusion (ported from the lidar-optimized branch) ─────────────
@@ -359,6 +376,7 @@ def _fuse_tsdf(capture, cfg: Settings, convention: str, mesh_path, verbose: bool
     pcd = pcd.voxel_down_sample(cfg.voxel_size)
     if len(pcd.points) >= cfg.stat_nb_neighbors:
         pcd, _ = pcd.remove_statistical_outlier(cfg.stat_nb_neighbors, cfg.stat_std_ratio)
+    pcd = canonical_order(pcd)
     if verbose:
         print(f"[fusion] convention={convention} method=tsdf voxel={voxel}m frames={used} "
               f"pts={len(pcd.points)}")

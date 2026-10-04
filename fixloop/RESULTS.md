@@ -65,15 +65,43 @@ Confirmed: edges snapped to the first obstacle layer (cabinet and pillar faces) 
 unsupported edges were exported as walls. Fixing both moved the errors by an order of
 magnitude on three of four captures.
 
-Not fixed / found along the way:
-1. **Non-determinism.** `kitchen_room_scan` gives 18.8 cm in one run and 65.8 cm (2 phantom
-   walls) in the next, with identical code. Before the fix, `study_room_friend` also moved
-   161.4 -> 161.7 -> 115.0 cm between runs that used the same code. Seed/threading
-   sources are in `TODO.txt` (drift ICP). Until this is fixed the repeatability gate fails
-   and single-run numbers carry noise.
+Found along the way:
+1. **Non-determinism (fixed in a follow-up commit, see below).** `kitchen_room_scan` gave
+   18.8 cm in one run and 65.8 cm (2 phantom walls) in the next, with identical code.
+   Before the fix, `study_room_friend` also moved 161.4 -> 161.7 -> 115.0 cm between runs
+   that used the same code.
+
+Not fixed:
 2. **bedroom_2 still 61 cm off** on the long wall. Likely a wardrobe-type obstacle the
    coverage rule does not look past; not investigated.
 3. **Tape ambiguity.** Ground truth is wall to wall; with cabinets in the way the real wall
    is only partly visible (coverage ~0.6), so the rule uses a threshold of 0.5 that I tuned
    on this data. It may over-fit these four rooms.
 4. Kitchen footprint is now 7.63 m2 vs 7.24 m2 from the tape (+5.4 %).
+
+## Follow-up: determinism fix (same code, same capture, same plan)
+
+Cause, traced by bisecting intermediate files over repeated runs of `kitchen_room_scan`:
+- Camera poses (`cameras.json`) were byte-identical every run, so drift correction was
+  not the source (my earlier suspicion in `TODO.txt` was wrong).
+- The fused cloud was the same point **set** every run but in a different **order**:
+  Open3D's `voxel_down_sample` walks a hash map. Its parallel voxel averages also differ in
+  the last float bits (~1e-14 m).
+- Normals, the dominant wall angle and plane sampling read the cloud in order, and the
+  grid layout (2 cm cells) amplifies the tiny differences into different outlines
+  (4 vs 6 vertices, 2 cm edge flips).
+
+Fix: `canonical_order()` in `floorplan/fusion/depth_fusion.py` rounds the fused cloud to
+0.1 mm (the sensor resolves 1 mm) and sorts it lexicographically. Test:
+`tests/test_determinism.py`.
+
+Result: `results.json` is byte-identical for all four captures across three full
+benchmark runs (`benchmark/reports/det_run3..5`; report copy `fixloop/after_deterministic_report.md`).
+Accuracy unchanged at 26 % (6/23), because the plans are the same ones the earlier runs
+produced when they happened to land well.
+
+Remaining caveat: the two kitchen scans are still 25.4 cm apart on the worst wall
+(repeatability gate 1 cm), but that is now a real difference between the two captures
+(scan 1: 18.8 cm worst wall error, scan 2: 7.6 cm), not run-to-run noise. Not investigated.
+Byte-for-byte `scan_metric.ply` is not guaranteed (up-rotation float noise ~1e-14 m);
+`results.json` is.
