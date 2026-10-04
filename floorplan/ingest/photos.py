@@ -24,6 +24,7 @@ class PhotoSet:
     f_px: float | None                # focal length in pixels (single-camera assumption)
     fov_deg: float | None
     source_index: list[int] | None = None   # video tier: source frame number per image
+    ordered: bool = False             # only true for an actual temporal sequence
 
     @property
     def n_images(self) -> int:
@@ -35,25 +36,26 @@ def _exif_focal_px(path: Path, size: tuple[int, int]) -> float | None:
         from PIL import Image
         with Image.open(path) as im:
             exif = im.getexif()
+            camera_exif = exif.get_ifd(34665)  # focal length lives in the Exif sub-IFD
     except Exception:
         return None
-    w, _h = size
-    f35 = exif.get(41989)  # FocalLengthIn35mmFilm
+    w = max(size)  # 36 mm is the long side, including portrait images
+    f35 = camera_exif.get(41989, exif.get(41989))  # FocalLengthIn35mmFilm
     if f35:
         try:
             return float(f35) / 36.0 * w
         except (TypeError, ValueError):
             pass
-    # FocalLength (tag 37386) is the *physical* focal length (~6-7 mm on an iPhone);
-    # without the sensor width it cannot be converted to pixels, so it is not used.
+    # Physical focal length needs sensor size; treating phone millimetres as
+    # 35mm-equivalent silently produces an extremely wide, distorted camera.
     return None
 
 
 def _image_size(path: Path) -> tuple[int, int] | None:
     try:
-        from PIL import Image
+        from PIL import Image, ImageOps
         with Image.open(path) as im:
-            return im.size
+            return ImageOps.exif_transpose(im).size
     except Exception:
         return None
 

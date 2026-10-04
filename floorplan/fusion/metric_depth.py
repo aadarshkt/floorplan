@@ -84,9 +84,17 @@ def _predict(pipe, path: Path, max_dim: int) -> np.ndarray:
 
 
 def _paths_for(photos: PhotoSet, images: list) -> list[Path | None]:
-    """Map COLMAP image names back to source paths (copies are '<idx><suffix>')."""
-    by_name = {f"{i:06d}{p.suffix.lower()}": p for i, p in enumerate(photos.image_paths)}
-    return [by_name.get(im.name) for im in images]
+    """Map COLMAP image names back to source paths.
+
+    COLMAP sees '<camera_group>/<idx>.<ext>' (one folder per shared-calibration
+    group); the stem is the index into ``photos.image_paths``.
+    """
+    out: list[Path | None] = []
+    for im in images:
+        stem = Path(im.name).stem
+        k = int(stem) if stem.isdigit() else -1
+        out.append(photos.image_paths[k] if 0 <= k < photos.n_images else None)
+    return out
 
 
 def _px_stride(n_images: int, size: tuple[int, int] | None, budget: int) -> int:

@@ -155,5 +155,5 @@ def load(path: str | Path, fps: float = 2.0, mode: str = "sharp",
         f_px=None,
         fov_deg=65.0,
         source_index=idx,
+        ordered=True,
     )
-    return ps

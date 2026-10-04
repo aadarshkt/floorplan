@@ -43,6 +43,14 @@ def choose(candidates: list[Reconstruction], cfg: Settings,
            verbose: bool = False) -> tuple[Reconstruction, list[dict]]:
     if not candidates:
         raise ValueError("arbiter got no candidates")
+    if len(candidates) == 1:
+        best = candidates[0]
+        table = [{"path": best.path_chosen, "n_points": len(best.points),
+                  "selection": "only_successful_candidate"}]
+        best.notes = {**best.notes, "arbiter": table, "winner": best.path_chosen}
+        if verbose:
+            print(f"[arbiter] chose {best.path_chosen}")
+        return best, table
     scored = []
     for c in candidates:
         s = score(np.asarray(c.points), cfg)
