@@ -39,7 +39,7 @@ The second line, `Overall: X/Y captures passed`, is the stricter per-capture
 ./.venv/bin/floorplan bench --manifest benchmark/manifest.json --out benchmark
 
 # force a full pipeline re-run (ignore cached results.json)
-./.venv/bin/floorplan bench --manifest benchmark/manifest.json --out benchmark --force
+./.venv/bin/floorplan bench --manifest benchmark/manifest.json --out benchmark/selftest --force
 
 # fix loop: shared runs/, before and after a code fix
 ./.venv/bin/floorplan bench --manifest benchmark/manifest.json \

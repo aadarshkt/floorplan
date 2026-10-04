@@ -147,7 +147,7 @@ Score / compare:
 ```bash
 ./.venv/bin/floorplan bench --manifest benchmark/manifest.video.json  --out benchmark/reports/video
 ./.venv/bin/floorplan bench --manifest benchmark/manifest.photos.json --out benchmark/reports/photos
-./.venv/bin/floorplan bench --manifest benchmark/manifest.json       --out benchmark --force   # LiDAR
+./.venv/bin/floorplan bench --manifest benchmark/manifest.json       --out benchmark/selftest --force   # harness self-test only (GT = pipeline output)
 ```
 
 What a successful run prints, and where to look:
@@ -209,8 +209,8 @@ video    ─┘                                   ├ lidar : depth+pose fusion
 ./.venv/bin/floorplan bench --manifest benchmark/manifest.json --out benchmark
 
 # 2. read the result
-cat benchmark/report.md      # per-capture gate table + the single accuracy number
-cat benchmark/gates.json     # the same, machine-readable
+cat benchmark/selftest/report.md      # per-capture gate table + the single accuracy number
+cat benchmark/selftest/gates.json     # the same, machine-readable
 ```
 
 `report.md` leads with the one number that matters:
