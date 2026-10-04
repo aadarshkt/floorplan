@@ -34,7 +34,7 @@ Rooms: kitchen_room_scan and kitchen_scan_2, LiDAR.
 | Ceiling spread | **2.4 cm** | 1 cm |
 | Same capture, run twice | byte-identical `results.json` (`tests/test_determinism.py`) | |
 
-**Which failure do we have?** Unrepeatable between captures. Run-to-run noise is gone (same input, same bytes), so the 25 cm wall gap and 2.4 cm ceiling spread are real differences between the two scans (ceiling errors 0.9 vs 3.3 cm; walls: scan 1 18.8 cm worst, scan 2 7.6 cm). We did not establish why; cabinets blocking the wall is the leading suspect, not a tested cause. We cannot call the system biased: with one room twice there is not enough data to separate a bias from spread.
+**Which failure do we have?** Unrepeatable between captures. Run-to-run noise is gone (same input, same bytes), so the 25 cm wall gap and 2.4 cm ceiling spread are real differences between the two scans (ceiling errors 0.9 vs 3.3 cm; walls: scan 1 18.8 cm worst, scan 2 7.6 cm). We did not establish why; cabinets blocking the wall is the leading suspect, not a tested cause. The author notes the kitchen was cluttered during both scans (not tidied beforehand); we did not re-scan a cleared kitchen, so whether clutter explains the gap is untested. The kitchen stays in the benchmark because it is the only repeatability pair. We cannot call the system biased: with one room twice there is not enough data to separate a bias from spread.
 
 ## 3. Confidence-interval calibration
 

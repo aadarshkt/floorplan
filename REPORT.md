@@ -101,7 +101,7 @@ By the assignment's rule this prediction is **badly wrong**, in the optimistic d
 
 ## 7. Known failure modes
 
-- **Cabinets and furniture against walls**: the plan finds the cabinet face. Partly fixed; bedroom_2 (62 cm) is still wrong.
+- **Cabinets and furniture against walls**: the plan finds the cabinet face. The kitchen was cluttered, not tidied, when both kitchen scans were taken (author's note). Furniture and clutter in front of walls are a likely contributor to the kitchen errors and to the 25 cm disagreement between the two scans, but we did not re-scan a cleared kitchen, so this is unproven. Partly fixed; bedroom_2 (62 cm) is still wrong.
 - **Doors and windows**: needs points seen beyond the wall. Closed doors and windows are mostly missed (openings gate 0 %).
 - **Two scans of one room disagree** by up to 25 cm (kitchen).
 - **Ceiling not swept**: `observed: false`, a prior with a wide interval.
