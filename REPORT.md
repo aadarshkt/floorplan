@@ -2,6 +2,14 @@
 
 Scope statement first. This submission delivers a **working LiDAR tier** from Stray Scanner, a **video tier that runs but does not meet its gate**, and **no real photo tier**. Damage regions, concealed-damage flags, scope line items and the head-to-head against a consumer app are **not built**. Every number below is from tape-measured rooms (4 rooms, one author) and comes from files in this repo.
 
+## What works
+
+- The LiDAR tier runs end to end from a Stray Scanner zip in about 20 s on an M1 laptop, offline, with one command, and is deterministic (byte-identical `results.json` on rerun).
+- On the cleanest room (study_room_friend, against tape): worst wall 5.6 cm, footprint 9.69 m² vs 9.98 m² (2.9 % under), ceiling 0.9 cm. Ceiling height is within the 1.5 cm gate on 2 of 4 rooms.
+- Pose-graph drift correction cuts the loop-closure error on the multi-room sample from 25.5 cm to 2.1 cm (section 3).
+- The fix loop moved the worst gate from 161.4 cm to 5.6 cm worst-wall error, with a declaration committed first and before/after runs that can be regenerated (section 6).
+- These do not add up to a passing benchmark: 0 of 4 rooms pass every gate, and 26 % of measurements are within tolerance. The sections below say where and why.
+
 ## 1. Architecture
 
 One command per capture: `floorplan run <capture> --out <dir>`. The tier is auto-detected from the input (`ingest/detect.py`): a Stray Scanner or Record3D zip/folder (contains `odometry.csv`) is LiDAR, a video file is video, a folder of images is photos.
