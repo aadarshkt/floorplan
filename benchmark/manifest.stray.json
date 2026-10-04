@@ -21,6 +21,13 @@
       "tier": "lidar",
       "room_id": "r1",
       "ground_truth": "ground_truth/bedroom_2.json"
+    },
+    {
+      "id": "study_room_friend",
+      "path": "captures/study_room_friend",
+      "tier": "lidar",
+      "room_id": "r1",
+      "ground_truth": "ground_truth/study_room_friend.json"
     }
   ],
   "repeatability": [
