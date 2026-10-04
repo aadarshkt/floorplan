@@ -1,56 +1,67 @@
 # Compliance matrix
 
-Requirement → where it lives → artifact → status. Status is honest:
-**done** (works and is evidenced), **partial** (works with stated limits),
-**todo** (not built). Updated as work lands.
+Requirement → file → artifact → status. **done** = works and is evidenced; **partial** = works with stated limits or fails its gate; **not done** = not built (a conscious scope cut, not an oversight).
+Numbers: `BENCHMARK_REPORT.md`. Explanation: `REPORT.md`.
 
-## Part 1 — capture route and tiers
-
-| Requirement | File / command | Artifact | Status |
-|---|---|---|---|
-| Capture route: stock app + one-page protocol | `CAPTURE_PROTOCOL.md` (Record3D) | protocol page | todo |
-| Device matrix (tier → hardware → honest accuracy) | technical report §2 | table | todo |
-| LiDAR tier: depth + poses + intrinsics | `floorplan run <x>.r3d` · `floorplan/ingest/r3d.py`, `fusion/depth_fusion.py` | results.json, floor_plan.svg | partial: single rooms solid, multi-room layout rough |
-| Video tier | `floorplan run <clip>.mp4` · `ingest/video.py`, `fusion/sfm_depth.py` | same contract | partial: works on slow captures (scale ±4–7 %), fragments on fast sweeps |
-| Photos tier, 2–8 stills/room | `floorplan run <folder>` | same contract | partial: single-image fallback only; SfM on sparse stills fails |
-| Photo folders per room → one stitched plan | — | — | todo |
-
-## Part 2 — output contract per capture
+## Part 1: capture route and tiers
 
 | Requirement | File | Artifact | Status |
 |---|---|---|---|
-| Per-room plan: walls, ceiling, floor area, openings | `geometry/layout.py`, `geometry/room.py`, `geometry/openings.py` | results.json, floor_plan.svg | partial: openings need evidence-based tuning on real rooms |
-| Stitched multi-room plan + adjacency | `geometry/layout.py` (one capture), `geometry/multiroom.py` | results.json `property.adjacency` | partial: adjacency only via shared walls |
-| Damage regions (class + metric extent) | — | `damage_regions: []` | todo |
-| Concealed-damage flags + rule fired | — | `concealed_damage_flags: []` | todo |
-| Scope line items keyed to surfaces | — | `scope_line_items: []` | todo |
-| Confidence interval on every measurement | `export/json_export.py` (`widen`), `geometry/layout.py` (edge spread) | `ci95` on every value | partial: needs calibration against laser truth |
-| One command per capture | `floorplan run <input> --out <dir>` | — | done |
-| JSON to published schema | `schema/floorplan.schema.json` | results.json | partial: schema must be re-checked against new fields |
-| Rendered plan | `export/svg.py`, `export/dxf.py` | floor_plan.svg / .dxf | done |
+| Capture route: stock app + one-page protocol | `CAPTURE_PROTOCOL.md` (Stray Scanner) | protocol page | done (not yet tried by a non-engineer) |
+| Device matrix | `CAPTURE_PROTOCOL.md`, `REPORT.md` §2 | table | done |
+| LiDAR tier | `ingest/r3d.py`, `ingest/record3d.py`, `fusion/depth_fusion.py` | `floorplan run x.zip` | partial: runs in about 20 s; gates mostly fail |
+| Video tier | `ingest/video.py`, `fusion/sfm_depth.py`, `fusion/metric_depth.py` | `floorplan run x.mp4 --scale-ref` | partial: runs; 0 of 4 rooms usable; needs a known ceiling height |
+| Photos tier (2 to 8 stills per room) | `ingest/photos.py` | `floorplan run <folder>` | **not done**: SfM registers 0 of 8 stills |
+| Per-room photo folders stitched into one plan | none | none | **not done** |
+| Mirrors, glass, wet surfaces, low light | `REPORT.md` §7 | stated as risks | **not done**: no test captures, no handling |
 
-## Part 2 — gates (benchmark)
+## Part 2: output contract
 
-| Gate | How it is measured | Status |
+| Requirement | File | Artifact | Status |
+|---|---|---|---|
+| Per-room plan: walls, ceiling, area, openings | `geometry/layout.py`, `room.py`, `openings.py` | `results.json`, `floor_plan.svg` | partial: openings mostly missed |
+| Stitched multi-room plan + adjacency | `geometry/layout.py`, `multiroom.py` | `results.json property.adjacency` | partial: one capture only; no tape truth |
+| Damage regions | none | `damage_regions: []` | **not done** (out of scope by decision) |
+| Concealed-damage flags + rule | none | `concealed_damage_flags: []` | **not done** |
+| Scope line items | none | `scope_line_items: []` | **not done** |
+| CI on every measurement | `export/json_export.py` | `ci95` | partial: coverage 40 % vs 85 % |
+| One command per capture | `floorplan run <input> --out <dir>` | CLI | done |
+| JSON to published schema | `schema/floorplan.schema.json` | `results.json` | done (damage arrays empty) |
+| Rendered plan | `export/svg.py`, `export/dxf.py` | SVG, DXF | done |
+
+## Part 2: benchmark set and gates
+
+| Requirement | Evidence | Status |
 |---|---|---|
-| Opening widths ≤2 cm on ≥85 %, missed + phantom count | `floorplan bench` (`eval/metrics.py` opening_errors) | scoring done; accuracy unmeasured (needs laser truth) |
-| Ceiling ≤1.5 cm, repeat spread ≤1 cm | `bench` + repeatability block | scoring done; needs a room captured twice |
-| Repeatability 1 cm / 0.5 % per wall | `bench` repeatability | todo: capture a room twice |
-| Drift accountability + on/off ablation | `drift.py` (pose graph, ICP-verified loops), `floorplan drift-ablate`, `bench --ablate-drift` | LiDAR tier done; ablation run on c7d28f72c6 (13 loops, median loop error 25 cm -> 2 cm, footprint -0.27 %); needs laser truth to show accuracy gain |
-| Photo-tier whole-property stitch | — | todo |
-| Video ±3 % / photos ±8 % with calibrated intervals | `floorplan xbench` (vs LiDAR), `bench` (vs laser) | partial |
+| Multi-room capture, 3+ rooms + connector, tape truth | assignment samples only, no truth | **not done** |
+| Furnished room with staged damage (2 classes) | none | **not done** |
+| Same rooms at all three tiers | 4 single rooms at LiDAR + video | partial |
+| Room captured twice, same tier | kitchen x2, LiDAR | done |
+| Tape/laser truth + raw data | `benchmark/ground_truth/`, captures (see `REPRODUCE.md`) | partial: 4 rooms, tape not laser |
+| Opening widths ≤2 cm on ≥85 % | `BENCHMARK_REPORT.md` §1 | **fail** (0 %) |
+| Ceiling ≤1.5 cm; spread ≤1 cm; biased or unrepeatable stated | §1, §2 | **fail** (2 of 4 rooms; spread 2.4 cm; unrepeatable) |
+| Repeatability 1 cm / 0.5 % | §2 | **fail** (25.2 cm) |
+| Drift accountability + ablation | `drift.py`, `benchmark/ablation/c7d28f72c6/` | done as mechanism and ablation; accuracy gain unproven (no truth) |
+| Photo-tier whole-property stitch ±8 % | §5 | **fail** |
+| Video ±3 %, photo ±8 %, calibrated | §4 | **fail** |
 
-## Parts 3–5 and deliverables
+## Parts 3 to 5
 
 | Requirement | File | Status |
 |---|---|---|
-| Head-to-head vs consumer app on 2 rooms (beat/tie ≥70 %) | `benchmark/head_to_head/` + table in report | todo |
-| Fix loop: worst gate, root cause, prediction, before/after regenerable | `fixloop/` (declaration, before/after reports, diff) | todo |
-| Process evidence (incremental commits) | git history | ongoing |
-| README: clean machine → running in <15 min | `README.md` | partial: update for .r3d, lzfse |
-| Reproduction bundle (regenerate every number) | `benchmark/manifest*.json`, `floorplan bench`/`xbench` | partial |
-| Benchmark report (3 tiers, repeatability, head-to-head, timing) | `benchmark/reports/` | partial |
-| Technical report ≤6 pages | `REPORT.md` | todo |
-| Raw benchmark data (sensor logs, ground truth, app exports) | `benchmark/` (+ external storage for .r3d) | partial: ground truth not yet measured |
-| Mirrors, glass, wet surfaces, low light covered | report §failure modes + protocol | todo |
-| Weights fetched by script | `scripts/fetch_weights.sh` | done |
+| Head-to-head vs consumer app on 2 rooms | none | **not done** (no export exists) |
+| Fix loop declaration, before/after regenerable, diff | `fixloop/` (tag `fixloop-before`) | done: gate moved (161 to 5.6 cm worst wall) but capture-level gate not passed; prediction badly wrong, post-mortem written |
+| Process evidence | git history (over 35 commits on main, 3 to 4 Oct) | done |
+
+## Deliverables
+
+| # | Deliverable | File | Status |
+|---|---|---|---|
+| 1 | Compliance matrix | `COMPLIANCE.md` | done |
+| 2 | Capture route + device matrix | `CAPTURE_PROTOCOL.md` | done |
+| 3 | Repo, README to running <15 min, one command | `README.md`, `TESTING.md` | done: native install (macOS), LiDAR tier runs in about 20 s; not timed on a second clean machine |
+| 4 | Reproduction bundle | `REPRODUCE.md`, `benchmark/manifest*.json` | partial: captures are not in git (about 2 GB) |
+| 5 | Benchmark report | `BENCHMARK_REPORT.md` | done |
+| 6 | Fix loop bundle | `fixloop/` | done |
+| 7 | Technical report ≤6 pages | `REPORT.md`, `REPORT.pdf` | done |
+| 8 | Raw benchmark data | `benchmark/ground_truth/` + captures | partial: see `REPRODUCE.md` |
