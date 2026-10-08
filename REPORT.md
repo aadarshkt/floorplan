@@ -5,7 +5,7 @@ Scope statement first. This submission delivers a **working LiDAR tier** from St
 ## What works
 
 - The LiDAR tier runs end to end from a Stray Scanner zip in about 20 s on an M1 laptop, offline, with one command, and is deterministic (byte-identical `results.json` on rerun).
-- On the cleanest room (study_room_friend, against tape): worst wall 5.6 cm, footprint 9.69 m² vs 9.98 m² (2.9 % under), ceiling 0.9 cm. Ceiling height is within the 1.5 cm gate on 2 of 4 rooms.
+- On the cleanest room (study_room_friend, against tape): worst wall 5.6 cm, footprint 9.75 m² vs 9.98 m² (2.3 % under), ceiling 0.9 cm; the remaining 5.6 cm wall error is residual pose drift between passes, not furniture (`BENCHMARK_REPORT.md` §1a). Ceiling height is within the 1.5 cm gate on 2 of 4 rooms.
 - Pose-graph drift correction cuts the loop-closure error on the multi-room sample from 25.5 cm to 2.1 cm (section 3).
 - The fix loop moved the worst gate from 161.4 cm to 5.6 cm worst-wall error, with a declaration committed first and before/after runs that can be regenerated (section 6).
 - These do not add up to a passing benchmark: 0 of 4 rooms pass every gate, and 26 % of measurements are within tolerance. The sections below say where and why.

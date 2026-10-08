@@ -57,6 +57,8 @@ for w in r["walls"]:
 EOF
 ```
 
+**Skip the run:** precomputed outputs for 9 captures (our 4 tape-measured rooms, the 3 assignment samples as `assignment_1..3`, and 2 more) are on Drive as `stray.zip`. Unzip into `benchmark/runs/`, and each `benchmark/runs/stray/<capture>/` has the files above plus `layout_debug.png`, a top-down check of the layout (legend in [`BENCHMARK_REPORT.md`](BENCHMARK_REPORT.md) §1b). Added 2026-10-09; see [`SUBMISSION.md`](SUBMISSION.md).
+
 Compare those numbers with your own laser or tape. [`TESTING.md`](TESTING.md) is the one-page
 scoring guide (which field to compare, what counts as a pass).
 

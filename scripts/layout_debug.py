@@ -2,7 +2,8 @@
 
     .venv/bin/python scripts/layout_debug.py <run_dir> <out.png>
 
-grey: all points, black: wall evidence, blue: cameras, red: room polygons.
+grey: all points, black: wall evidence (the band the layout actually uses),
+blue: cameras, red: room polygons with edge ids (e0, e1, ...), 1 m scale bar.
 """
 import json
 import sys
@@ -26,7 +27,8 @@ fz, cz, obs, fp, cp = Rm.floor_and_ceiling(pls, pts, cfg, cam_z=float(np.median(
 walls = W.snap_orthogonal(W.merge_double_walls(
     W.vectorize([p for p in pls if p.kind == "vertical"], fz, cfg), cfg), cfg)
 theta = max(walls, key=lambda w: w.length).angle if walls else 0.0
-band = L._band(pts, fz, cz, obs)
+band = L._band(pts, fz, cz, obs,
+               top_margin=cfg.layout_band_top_m if cfg.layout_wall_support else 0.08)
 polys = [p for p, _ in L.rooms(pts, fz, cz, obs, cams[:, :2], theta, cfg)]
 print(f"floor {fz:.2f} ceil {cz:.2f} observed={obs} height {cz - fz:.2f}")
 for p in polys:
@@ -52,4 +54,16 @@ for q in px(cams[::10, :2]):
     dr.point(q, fill=(0, 0, 255))
 for p in polys:
     dr.line(px(np.vstack([p, p[:1]])), fill=(255, 0, 0), width=3)
+    c = p.mean(0)
+    for k in range(len(p)):
+        mid = (p[k] + p[(k + 1) % len(p)]) / 2
+        lab = mid + (c - mid) / max(np.linalg.norm(c - mid), 1e-6) * 0.25   # just inside
+        dr.text(px([lab])[0], f"e{k}", fill=(200, 0, 0))
+dr.line([(10, H - 15), (10 + s, H - 15)], fill=(0, 0, 0), width=3)
+dr.text((10, H - 30), "1 m", fill=(0, 0, 0))
+legend = [((205, 205, 205), "all points"), ((0, 0, 0), "wall band (layout input)"),
+          ((0, 0, 255), "camera path"), ((255, 0, 0), "room outline, edge ids")]
+for i, (col, txt) in enumerate(legend):
+    dr.rectangle([10, 10 + 16 * i, 20, 20 + 16 * i], fill=col)
+    dr.text((26, 9 + 16 * i), txt, fill=(0, 0, 0))
 img.save(out)

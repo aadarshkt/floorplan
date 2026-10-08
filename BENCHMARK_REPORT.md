@@ -22,7 +22,52 @@ Archived: `fixloop/after_deterministic_report.md`.
 - Wall gate: only study_room_friend meets the 6 cm worst-wall limit. No capture meets the 3 cm per-wall limit.
 - Opening gate: **fails, 0 %.** Doors and windows are not detected as the right width or at all. We did not fix this.
 - Ceiling gate: 2 of 4 rooms pass.
-- Footprint, study_room_friend: 9.69 m² vs 9.98 m² tape (-2.9 %).
+- Footprint, study_room_friend: 9.75 m² vs 9.98 m² tape (-2.3 %).
+
+### 1a. Closer look: study_room_friend (no wardrobe or cabinets)
+
+The one room with no full-height furniture against a wall, so it shows the pipeline's accuracy when obstacles are not the problem.
+Output: `benchmark/runs/stray/study_room_friend/` (from the section 1 regenerate command; byte-identical to the archived deterministic run). Tape: `benchmark/ground_truth/study_room_friend.json`.
+
+| Quantity | Tape | Plan | Error | Plan 95 % interval | Tape inside? | Gate |
+|---|---|---|---|---|---|---|
+| Long walls (w0, w2) | 3.400 m | 3.385 m | -1.5 cm (0.4 %) | 3.339 to 3.431 | yes | 3 cm: pass |
+| Short walls (w1, w3) | 2.935 m | 2.879 m | **-5.6 cm** (1.9 %) | 2.820 to 2.938 | yes (barely) | 3 cm: **fail**; 6 cm worst wall: pass |
+| Ceiling height | 2.836 m | 2.845 m | +0.9 cm | 2.834 to 2.856 | yes | 1.5 cm: pass |
+| Floor area | 9.979 m² | 9.746 m² | -2.3 % | 9.50 to 9.99 | yes | 5 %: pass |
+| Walls / rooms | 4 / 1 | 4 / 1 | no phantoms | | | pass |
+
+Leaving openings aside, the room passes 4 of 5 gates. All four tape values fall inside their intervals here; the low overall calibration (40 %) comes from the other rooms. The plan is a rectangle, so opposite walls share one length: there are two independent wall errors, not four.
+
+**Why the short walls are 5.6 cm short (diagnosed, not fixed).** The two long walls are 5.6 cm too close together, and the cause is the north long wall (edge 2), not furniture. In the fused cloud, that wall's face drifts from -3 cm to +11 cm outward along its 3.4 m length (about 2.4° off parallel), and the rectilinear layout snaps the edge to its inner end. Fusing each quarter of the walk separately shows that the slope is **pose drift, not the room**:
+
+| Frames | Edge 2 wall-face offset along its length (cm, 0.3 m steps) |
+|---|---|
+| 0 to 1815 | 11 12 12 13 14 14 14 14 14 13 13 (straight, parallel) |
+| 1830 to 3645 | -3 -2 0 1 2 3 6 7 9 10 11 (rotated) |
+| 5475 to 7275 | partial view: -1 3 3 4 4 5 |
+
+The opposite wall (edge 0) agrees across passes to about 1 cm. So the same wall is placed up to about 15 cm apart by different passes of one walk, even after the pose graph closed 10 ICP-verified loops (with drift correction off the plan breaks into 8 walls, so the correction helps, but does not finish the job). Consequences: (1) the -5.6 cm error is a compromise between inconsistent passes; (2) fitting a free-angle line to the wall would make it worse, because it would reproduce the drifted slope; (3) the fix belongs in drift correction (e.g. constrain surfaces seen in several passes to coincide), and the same effect is a candidate for the 25 cm kitchen repeatability gap. Regenerate: `python scripts/wall_passes.py benchmark/captures/study_room_friend benchmark/runs/stray/study_room_friend`.
+
+### 1b. Precomputed runs, including captures without ground truth (added 2026-10-09)
+
+All LiDAR-tier outputs are on Drive as `stray.zip` (about 190 MB). Unzip it into `benchmark/runs/` to get `benchmark/runs/stray/<capture>/`, with `results.json`, `floor_plan.svg`, `floor_plan.dxf`, `scan_metric.ply`, `cameras.json`, `provenance.json` and `layout_debug.png` for each capture. The four tape-measured rooms are byte-identical to what the section 1 command regenerates.
+
+`layout_debug.png` is a top-down view: grey = all scan points, black = the wall band the layout uses (0.9 m above the floor to 0.5 m below the ceiling, vertical surfaces only), blue = camera path, red = chosen room outlines with edge ids `e0, e1, ...` (= walls `r1-w0, r1-w1, ...` in `results.json`), 1 m scale bar. A red edge should sit on the inner face of a black band; where it does not, the black points show what it snapped to. Regenerate: `python scripts/layout_debug.py <run_dir> <run_dir>/layout_debug.png`.
+
+Five more captures were run with the same code. **None has tape ground truth, so they are not scored**; the notes come from visual inspection of `layout_debug.png`.
+
+| Run | Source | Rooms | Area (m²) | Ceiling (m) | Drift loops | What the debug view shows |
+|---|---|---|---|---|---|---|
+| assignment_1 | assignment `c00a170fe1` (single_room.zip) | 1 | 26.1 | 2.49, not observed (prior) | 0 | Room plus corridor arm merged into one 10-wall outline; the arm's far edges have almost no wall evidence |
+| assignment_2 | assignment `1a8384c3f6` (single_scan_floor_only.zip) | 3 | 63.9 | 2.48, not observed (prior) | 3 | **Room split fails**: one 52 m² "room" with 32 walls spans several rooms and the hall |
+| assignment_3 | assignment `c7d28f72c6` (single_scan_with_ceiling.zip) | 5 | 70.6 | 2.38 | 13 | Residual drift doubles some walls 10 to 15 cm apart; **room outlines overlap** (stitch gate fails as is) |
+| benchmark_1 | own capture | 1 | 18.8 | 2.83 | 0 (no revisit) | Main rectangle about 6.5 x 2.9 m is plausible; clutter adds short phantom walls (0.06, 0.25 m) |
+| benchmark_2 | own capture | 1 | 9.3 | 2.84 | 0 (none verified) | Main rectangle about 3.0 x 2.9 m is plausible; notches around a corner object and a possible recess |
+
+Regenerate the assignment runs: `floorplan run ../assignment/Assignment/<id> --out benchmark/runs/stray/assignment_<n>`. The assignment_3 footprint (70.6 m²) differs from the drift ablation in section 6 (69.2 m²) because the ablation was run before the fix loop.
+
+What this adds: on single clean rooms the LiDAR tier is close to tape, but on multi-room captures it fails in ways the scored rooms do not exercise: room separation (assignment_2), overlapping outlines and doubled walls from residual drift (assignment_3), and clutter becoming short phantom walls (benchmark_1/2). The whole-property plan depends on exactly these.
 
 ## 2. Repeatability (one room, two captures, same tier)
 
