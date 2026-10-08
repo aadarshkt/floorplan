@@ -1,0 +1,211 @@
+{
+  "manifest": "manifest.stray_video2.json",
+  "gates": {
+    "ceiling_height_abs_cm": 1.5,
+    "opening_width_abs_cm": 2.0,
+    "opening_pass_rate": 0.85,
+    "opening_phantom_max": 1,
+    "wall_length_abs_cm": 3.0,
+    "wall_length_max_abs_cm": 6.0,
+    "area_rel_pct": 5.0,
+    "repeatability_max_cm": 1.0,
+    "repeatability_rel_pct": 0.5,
+    "ci_coverage_min": 0.85
+  },
+  "summary": {
+    "captures_total": 2,
+    "captures_passed": 0,
+    "pass_rate": 0.0,
+    "accuracy": {
+      "within": 1,
+      "total": 13,
+      "accuracy": 0.077
+    },
+    "repeatability_passed": 0,
+    "ci": {
+      "n": 10,
+      "coverage": 0.2,
+      "meets_target": false
+    },
+    "drift_ablation_captures": 0
+  },
+  "per_capture": [
+    {
+      "capture_id": "study_room_friend",
+      "room_id": "r1",
+      "wall_length": {
+        "n_produced": 6,
+        "n_gt": 4,
+        "n_matched": 4,
+        "missed": 0,
+        "phantom": 2,
+        "mean_abs_cm": 39.77,
+        "max_abs_cm": 93.73,
+        "mean_rel_pct": 13.1,
+        "errors_cm": [
+          17.68,
+          93.73,
+          26.87,
+          20.79
+        ],
+        "pairs": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            4,
+            1
+          ],
+          [
+            5,
+            2
+          ]
+        ],
+        "pair_ids": [
+          [
+            "r1-w0",
+            null
+          ],
+          [
+            "r1-w1",
+            null
+          ],
+          [
+            "r1-w4",
+            null
+          ],
+          [
+            "r1-w5",
+            null
+          ]
+        ]
+      },
+      "ceiling_height": {
+        "produced": 3.709,
+        "gt": 2.836,
+        "abs_cm": 87.3,
+        "observed": true,
+        "gt_readings_spread_cm": null
+      },
+      "openings": {
+        "n_produced": 3,
+        "n_gt": 2,
+        "n_matched": 2,
+        "within_tol": 1,
+        "pass_rate": 0.333,
+        "missed": 0,
+        "phantom": 1,
+        "errors_cm": [
+          4.5,
+          1.97
+        ]
+      },
+      "area": {
+        "produced": 10.33,
+        "gt": null,
+        "rel_pct": null
+      },
+      "passed": false,
+      "checks": {
+        "wall": false,
+        "ceiling": false,
+        "openings": false,
+        "area": true
+      }
+    },
+    {
+      "capture_id": "bedroom_2",
+      "room_id": "r1",
+      "wall_length": {
+        "n_produced": 4,
+        "n_gt": 4,
+        "n_matched": 4,
+        "missed": 0,
+        "phantom": 0,
+        "mean_abs_cm": 64.7,
+        "max_abs_cm": 95.68,
+        "mean_rel_pct": 16.23,
+        "errors_cm": [
+          95.68,
+          33.73,
+          95.68,
+          33.73
+        ],
+        "pairs": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            1
+          ]
+        ],
+        "pair_ids": [
+          [
+            "r1-w0",
+            null
+          ],
+          [
+            "r1-w1",
+            null
+          ],
+          [
+            "r1-w2",
+            null
+          ],
+          [
+            "r1-w3",
+            null
+          ]
+        ]
+      },
+      "ceiling_height": {
+        "produced": 3.051,
+        "gt": 2.834,
+        "abs_cm": 21.7,
+        "observed": true,
+        "gt_readings_spread_cm": null
+      },
+      "openings": {
+        "n_produced": 1,
+        "n_gt": 1,
+        "n_matched": 1,
+        "within_tol": 0,
+        "pass_rate": 0.0,
+        "missed": 0,
+        "phantom": 0,
+        "errors_cm": [
+          31.0
+        ]
+      },
+      "area": {
+        "produced": 9.667,
+        "gt": null,
+        "rel_pct": null
+      },
+      "passed": false,
+      "checks": {
+        "wall": false,
+        "ceiling": false,
+        "openings": false,
+        "area": true
+      }
+    }
+  ],
+  "repeatability": [],
+  "drift_ablation": []
+}

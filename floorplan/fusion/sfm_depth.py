@@ -13,7 +13,9 @@ This path keeps the model for shape only and lets SfM fix the geometry:
                 upright images, and a phone held in portrait while the sensor
                 records landscape produces sideways frames.
   2. align      each frame's depth is scaled to the SfM depth of the keypoints
-                COLMAP triangulated in it, so all frames agree with one geometry.
+                COLMAP triangulated in it (off depth edges), then all frame
+                scales are solved jointly so neighbouring frames' dense depths
+                agree, and their common level is set by wide-baseline parallax.
   3. metric     one global factor (metres per SfM unit) from the pooled
                 model-vs-SfM depth ratio, with a bootstrap interval over frames.
   4. filter     depth-discontinuity (flying pixel) removal, then multi-view
@@ -142,8 +144,13 @@ def _edge_mask(d: np.ndarray, tol: float) -> np.ndarray:
     return ok & (np.nan_to_num(rel, nan=np.inf) <= tol)
 
 
-def _sfm_depth_ratio(im, d: np.ndarray, sfm_size, cfg: Settings) -> np.ndarray | None:
-    """SfM depth / model depth at the keypoints COLMAP triangulated in this frame."""
+def _sfm_depth_ratio(im, d: np.ndarray, sfm_size, cfg: Settings,
+                     smooth: np.ndarray | None = None) -> np.ndarray | None:
+    """SfM depth / model depth at the keypoints COLMAP triangulated in this frame.
+
+    With ``smooth``, keypoints on depth edges (where the model blurs) are skipped
+    when enough remain.
+    """
     if im.obs_xyz is None or im.obs_xy is None or len(im.obs_xyz) < 10:
         return None
     h, w = d.shape
@@ -154,11 +161,121 @@ def _sfm_depth_ratio(im, d: np.ndarray, sfm_size, cfg: Settings) -> np.ndarray |
     inside = (zc > 1e-9) & (ui >= 0) & (ui < w) & (vi >= 0) & (vi < h)
     if inside.sum() < 10:
         return None
-    zm = d[vi[inside], ui[inside]]
+    zc, ui, vi = zc[inside], ui[inside], vi[inside]
+    zm = d[vi, ui]
     good = np.isfinite(zm) & (zm > cfg.depth_min_m) & (zm < cfg.depth_max_m)
+    if smooth is not None and (good & smooth[vi, ui]).sum() >= 10:
+        good &= smooth[vi, ui]
     if good.sum() < 10:
         return None
-    return zc[inside][good] / zm[good]
+    return zc[good] / zm[good]
+
+
+# ── joint per-frame scales ───────────────────────────────────────────────────
+#
+# Keypoint ratios fix each frame's scale independently and still disagree by ~11 %
+# frame to frame (benchmark_1 vs LiDAR), so each frame lays its own copy of a wall
+# 10-30 cm apart. Neighbouring frames see the same surfaces from nearly the same
+# place, so their dense depths must agree: solve all log-scales jointly so they do,
+# with a prior to the keypoint scales that fixes the slow, chain-wide component.
+
+def _unproject(f: dict, a: float, stride: int) -> np.ndarray:
+    d, (fx, fy, cx, cy), im = f["d"], f["K"], f["im"]
+    h, w = d.shape
+    v, u = np.mgrid[0:h:stride, 0:w:stride]
+    ok = f["mask"][0:h:stride, 0:w:stride]
+    z = d[0:h:stride, 0:w:stride][ok] * a
+    u, v = u[ok], v[ok]
+    return (np.stack([(u - cx) * z / fx, (v - cy) * z / fy, z], axis=-1) - im.t) @ im.R
+
+
+def _pair_log_ratio(X: np.ndarray, g: dict, a: float, gross: float) -> np.ndarray | None:
+    """log(depth of X in frame g / g's own scaled depth there), on g's smooth pixels."""
+    im, d, (fx, fy, cx, cy) = g["im"], g["d"], g["K"]
+    Xc = X @ im.R.T + im.t
+    z = Xc[:, 2]
+    f = z > 1e-6
+    u = np.round(Xc[f, 0] / z[f] * fx + cx).astype(int)
+    v = np.round(Xc[f, 1] / z[f] * fy + cy).astype(int)
+    z = z[f]
+    h, w = d.shape
+    inb = (u >= 0) & (u < w) & (v >= 0) & (v < h)
+    u, v, z = u[inb], v[inb], z[inb]
+    ok = g["mask"][v, u]
+    if ok.sum() < 200:
+        return None
+    lr = np.log(z[ok] / (d[v[ok], u[ok]] * a))
+    lr = lr[np.abs(lr) < gross]
+    return lr if len(lr) >= 200 else None
+
+
+def joint_scales(frames: list[dict], order: list[int], a0: np.ndarray, cfg: Settings,
+                 iters: int = 4, stride: int = 8, gross: float = 0.25) -> np.ndarray:
+    n = len(frames)
+    x = np.log(a0)
+    pos = {fi: k for k, fi in enumerate(order)}
+    lam = cfg.depth_joint_prior
+    for _ in range(iters):
+        rows, rhs, wts = [], [], []
+        for i in range(n):
+            X = _unproject(frames[i], float(np.exp(x[i])), stride)
+            p = pos[i]
+            for q in range(p - cfg.depth_joint_neighbours, p + cfg.depth_joint_neighbours + 1):
+                if q == p or not 0 <= q < n:
+                    continue
+                j = order[q]
+                lr = _pair_log_ratio(X, frames[j], float(np.exp(x[j])), gross)
+                if lr is None:
+                    continue
+                # small baselines: frame i's depth moves with its own scale, so a
+                # median log-disagreement e asks for dx_i - dx_j = -e
+                rows.append((i, j))
+                rhs.append(-float(np.median(lr)))
+                wts.append(np.sqrt(len(lr)))
+        if not rows:
+            return a0
+        w = np.asarray(wts) / np.median(wts)
+        A = np.zeros((len(rows) + n, n))
+        b = np.zeros(len(rows) + n)
+        for k, ((i, j), r) in enumerate(zip(rows, rhs)):
+            A[k, i], A[k, j], b[k] = w[k], -w[k], w[k] * r
+        A[len(rows):, :] = lam * np.eye(n)
+        b[len(rows):] = lam * (np.log(a0) - x)
+        dx = np.linalg.lstsq(A, b, rcond=None)[0]
+        x += dx
+        if np.abs(dx).max() < 1e-3:
+            break
+    return np.exp(x)
+
+
+def parallax_level(frames: list[dict], order: list[int], a: np.ndarray,
+                   gaps: tuple[int, ...] = (5, 10, 15), stride: int = 8) -> float:
+    """Overall depth multiplier that best agrees with the SfM poses.
+
+    Between frames 5-15 keyframes apart the baseline is large enough that depth
+    which is uniformly too large or too small no longer lands on the same surface.
+    Returns the parabola-refined minimiser of the mean pairwise disagreement.
+    """
+    n = len(frames)
+    pairs = [(order[p], order[p + g]) for p in range(0, n, 2) for g in gaps if p + g < n]
+    pairs += [(j, i) for i, j in pairs]
+    cs = np.linspace(0.88, 1.12, 9)
+    cost = []
+    for c in cs:
+        errs = []
+        pts = {i: _unproject(frames[i], a[i] * c, stride) for i in {i for i, _ in pairs}}
+        for i, j in pairs:
+            lr = _pair_log_ratio(pts[i], frames[j], a[j] * c, 0.3)
+            if lr is not None:
+                errs.append(float(np.median(np.abs(lr))))
+        cost.append(np.mean(errs) if len(errs) >= 10 else np.nan)
+    cost = np.asarray(cost)
+    if np.isnan(cost).any():
+        return 1.0
+    k = int(np.clip(np.argmin(cost), 1, len(cs) - 2))
+    p2 = np.polyfit(cs[k - 1:k + 2], cost[k - 1:k + 2], 2)
+    c = -p2[1] / (2 * p2[0]) if p2[0] > 0 else cs[k]
+    return float(np.clip(c, cs[0], cs[-1]))
 
 
 # ── fusion ───────────────────────────────────────────────────────────────────
@@ -181,7 +298,9 @@ def reconstruct(photos: PhotoSet, cfg: Settings, sfm: ColmapResult, pipe,
             continue
         k = upright_k(im.R, g) if cfg.depth_upright else 0
         d = _shrink(_predict_upright(pipe, path, k, max_dim), cfg.depth_store_dim)
-        r = _sfm_depth_ratio(im, d, sfm.size, cfg)
+        mask = (_edge_mask(d, cfg.depth_edge_tol)
+                & (d > cfg.depth_min_m) & (d < cfg.depth_max_m))
+        r = _sfm_depth_ratio(im, d, sfm.size, cfg, smooth=mask)
         if r is None:
             continue
         # robust per-frame scale: median after trimming the worst 20 % of ratios
@@ -190,13 +309,25 @@ def reconstruct(photos: PhotoSet, cfg: Settings, sfm: ColmapResult, pipe,
         a = float(np.median(r[dev <= np.percentile(dev, 80)]))
         h, w = d.shape
         Kd = (K[0, 0] * w / sw, K[1, 1] * h / sh, K[0, 2] * w / sw, K[1, 2] * h / sh)
-        mask = (_edge_mask(d, cfg.depth_edge_tol)
-                & (d > cfg.depth_min_m) & (d < cfg.depth_max_m))
-        frames.append({"im": im, "d": a * d, "K": Kd, "mask": mask})
+        frames.append({"im": im, "d": d, "K": Kd, "mask": mask})
         a_list.append(a)
         ratio_pool.append(1.0 / a)
     if len(frames) < 2:
         raise RuntimeError("too few frames with SfM keypoints to align monocular depth")
+    order = sorted(range(len(frames)), key=lambda i: frames[i]["im"].name)
+
+    # 2b. frame scales that agree with each other, not only with sparse keypoints.
+    # The metric scale below still comes from the keypoint ratios (ratio_pool),
+    # which is what the focal-law correction was calibrated on.
+    a_kp = np.asarray(a_list)
+    a_fr, level = a_kp, 1.0
+    if cfg.depth_joint_scale and len(frames) >= 3:
+        a_fr = joint_scales(frames, order, a_kp, cfg)
+        if cfg.depth_parallax_level and len(frames) >= 12:
+            level = parallax_level(frames, order, a_fr)
+            a_fr = a_fr * level
+    for f, a in zip(frames, a_fr):
+        f["d"] = a * f["d"]
 
     # 3. global metric scale: metres per SfM unit, with a bootstrap over frames
     inv = np.asarray(ratio_pool)
@@ -220,7 +351,6 @@ def reconstruct(photos: PhotoSet, cfg: Settings, sfm: ColmapResult, pipe,
     half = float(np.hypot(sys_rel, (s_hi - s_lo) / (2 * S)))
 
     # 4. multi-view consistency against the nearest keyframes (in capture order)
-    order = sorted(range(len(frames)), key=lambda i: frames[i]["im"].name)
     pos = {fi: n for n, fi in enumerate(order)}
     stride = max(1, int(np.ceil(np.sqrt(
         len(frames) * frames[0]["d"].size / max(cfg.metric_max_points * 4, 1)))))
@@ -276,7 +406,8 @@ def reconstruct(photos: PhotoSet, cfg: Settings, sfm: ColmapResult, pipe,
     pts = np.asarray(pcd.points)
     if verbose:
         print(f"[fuse] hold={hold} frames={len(frames)} scale={S:.4f} m/unit "
-              f"(focal corr x{corr:.3f}, +-{half*100:.1f}%, frame spread {spread*100:.1f}%) "
+              f"(focal corr x{corr:.3f}, +-{half*100:.1f}%, frame spread {spread*100:.1f}%, "
+              f"joint {np.std(np.log(a_fr / a_kp))*100:.1f}%, level x{level:.3f}) "
               f"consistent {n_kept}/{n_total} -> {len(pts)} pts")
 
     return Reconstruction(
@@ -293,6 +424,8 @@ def reconstruct(photos: PhotoSet, cfg: Settings, sfm: ColmapResult, pipe,
             "scale_focal_correction": round(corr, 4), "scale_calibrated_framing": calibrated,
             "f_over_upright_height": round(f_rel, 4),
             "frame_scale_spread": round(spread, 4),
+            "joint_scale_change": round(float(np.std(np.log(a_fr / a_kp))), 4),
+            "parallax_level": round(level, 4),
             "consistent_fraction": round(n_kept / max(n_total, 1), 3),
             "camera_centres": centres,
             "camera_names": [f["im"].name for f in frames],

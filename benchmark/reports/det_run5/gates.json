@@ -1,0 +1,391 @@
+{
+  "manifest": "manifest.stray.json",
+  "gates": {
+    "ceiling_height_abs_cm": 1.5,
+    "opening_width_abs_cm": 2.0,
+    "opening_pass_rate": 0.85,
+    "opening_phantom_max": 1,
+    "wall_length_abs_cm": 3.0,
+    "wall_length_max_abs_cm": 6.0,
+    "area_rel_pct": 5.0,
+    "repeatability_max_cm": 1.0,
+    "repeatability_rel_pct": 0.5,
+    "ci_coverage_min": 0.85
+  },
+  "summary": {
+    "captures_total": 4,
+    "captures_passed": 0,
+    "pass_rate": 0.0,
+    "accuracy": {
+      "within": 6,
+      "total": 23,
+      "accuracy": 0.261
+    },
+    "repeatability_passed": 0,
+    "ci": {
+      "n": 20,
+      "coverage": 0.4,
+      "meets_target": false
+    },
+    "drift_ablation_captures": 0
+  },
+  "per_capture": [
+    {
+      "capture_id": "kitchen_room_scan",
+      "room_id": "r1",
+      "wall_length": {
+        "n_produced": 4,
+        "n_gt": 4,
+        "n_matched": 4,
+        "missed": 0,
+        "phantom": 0,
+        "mean_abs_cm": 15.47,
+        "max_abs_cm": 18.79,
+        "mean_rel_pct": 5.62,
+        "errors_cm": [
+          12.16,
+          18.79,
+          12.16,
+          18.79
+        ],
+        "pairs": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            3,
+            2
+          ]
+        ],
+        "pair_ids": [
+          [
+            "r1-w0",
+            null
+          ],
+          [
+            "r1-w1",
+            null
+          ],
+          [
+            "r1-w2",
+            null
+          ],
+          [
+            "r1-w3",
+            null
+          ]
+        ]
+      },
+      "ceiling_height": {
+        "produced": 2.867,
+        "gt": 2.858,
+        "abs_cm": 0.9,
+        "observed": true,
+        "gt_readings_spread_cm": null
+      },
+      "openings": {
+        "n_produced": 1,
+        "n_gt": 3,
+        "n_matched": 1,
+        "within_tol": 0,
+        "pass_rate": 0.0,
+        "missed": 2,
+        "phantom": 0,
+        "errors_cm": [
+          8.58
+        ]
+      },
+      "area": {
+        "produced": 7.184,
+        "gt": null,
+        "rel_pct": null
+      },
+      "passed": false,
+      "checks": {
+        "wall": false,
+        "ceiling": true,
+        "openings": false,
+        "area": true
+      }
+    },
+    {
+      "capture_id": "kitchen_scan_2",
+      "room_id": "r1",
+      "wall_length": {
+        "n_produced": 4,
+        "n_gt": 4,
+        "n_matched": 4,
+        "missed": 0,
+        "phantom": 0,
+        "mean_abs_cm": 7.0,
+        "max_abs_cm": 7.6,
+        "mean_rel_pct": 2.69,
+        "errors_cm": [
+          7.6,
+          6.41,
+          7.6,
+          6.41
+        ],
+        "pairs": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            3,
+            2
+          ]
+        ],
+        "pair_ids": [
+          [
+            "r1-w0",
+            null
+          ],
+          [
+            "r1-w1",
+            null
+          ],
+          [
+            "r1-w2",
+            null
+          ],
+          [
+            "r1-w3",
+            null
+          ]
+        ]
+      },
+      "ceiling_height": {
+        "produced": 2.891,
+        "gt": 2.858,
+        "abs_cm": 3.3,
+        "observed": true,
+        "gt_readings_spread_cm": null
+      },
+      "openings": {
+        "n_produced": 1,
+        "n_gt": 3,
+        "n_matched": 1,
+        "within_tol": 0,
+        "pass_rate": 0.0,
+        "missed": 2,
+        "phantom": 0,
+        "errors_cm": [
+          8.53
+        ]
+      },
+      "area": {
+        "produced": 7.629,
+        "gt": null,
+        "rel_pct": null
+      },
+      "passed": false,
+      "checks": {
+        "wall": false,
+        "ceiling": false,
+        "openings": false,
+        "area": true
+      }
+    },
+    {
+      "capture_id": "bedroom_2",
+      "room_id": "r1",
+      "wall_length": {
+        "n_produced": 4,
+        "n_gt": 4,
+        "n_matched": 4,
+        "missed": 0,
+        "phantom": 0,
+        "mean_abs_cm": 36.58,
+        "max_abs_cm": 62.05,
+        "mean_rel_pct": 8.81,
+        "errors_cm": [
+          62.05,
+          11.1,
+          62.05,
+          11.1
+        ],
+        "pairs": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            3
+          ]
+        ],
+        "pair_ids": [
+          [
+            "r1-w0",
+            null
+          ],
+          [
+            "r1-w1",
+            null
+          ],
+          [
+            "r1-w2",
+            null
+          ],
+          [
+            "r1-w3",
+            null
+          ]
+        ]
+      },
+      "ceiling_height": {
+        "produced": 2.869,
+        "gt": 2.834,
+        "abs_cm": 3.5,
+        "observed": true,
+        "gt_readings_spread_cm": null
+      },
+      "openings": {
+        "n_produced": 0,
+        "n_gt": 1,
+        "n_matched": 0,
+        "within_tol": 0,
+        "pass_rate": 0.0,
+        "missed": 1,
+        "phantom": 0,
+        "errors_cm": []
+      },
+      "area": {
+        "produced": 11.466,
+        "gt": null,
+        "rel_pct": null
+      },
+      "passed": false,
+      "checks": {
+        "wall": false,
+        "ceiling": false,
+        "openings": false,
+        "area": true
+      }
+    },
+    {
+      "capture_id": "study_room_friend",
+      "room_id": "r1",
+      "wall_length": {
+        "n_produced": 4,
+        "n_gt": 4,
+        "n_matched": 4,
+        "missed": 0,
+        "phantom": 0,
+        "mean_abs_cm": 3.54,
+        "max_abs_cm": 5.6,
+        "mean_rel_pct": 1.17,
+        "errors_cm": [
+          1.49,
+          5.6,
+          1.49,
+          5.6
+        ],
+        "pairs": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            3
+          ]
+        ],
+        "pair_ids": [
+          [
+            "r1-w0",
+            null
+          ],
+          [
+            "r1-w1",
+            null
+          ],
+          [
+            "r1-w2",
+            null
+          ],
+          [
+            "r1-w3",
+            null
+          ]
+        ]
+      },
+      "ceiling_height": {
+        "produced": 2.845,
+        "gt": 2.836,
+        "abs_cm": 0.9,
+        "observed": true,
+        "gt_readings_spread_cm": null
+      },
+      "openings": {
+        "n_produced": 1,
+        "n_gt": 2,
+        "n_matched": 1,
+        "within_tol": 0,
+        "pass_rate": 0.0,
+        "missed": 1,
+        "phantom": 0,
+        "errors_cm": [
+          18.0
+        ]
+      },
+      "area": {
+        "produced": 9.746,
+        "gt": null,
+        "rel_pct": null
+      },
+      "passed": false,
+      "checks": {
+        "wall": false,
+        "ceiling": true,
+        "openings": false,
+        "area": true
+      }
+    }
+  ],
+  "repeatability": [
+    {
+      "room_id": "r1",
+      "max_wall_cm": 25.2,
+      "mean_wall_cm": 14.88,
+      "ceiling_cm": 2.4,
+      "area_rel_pct": 6.194,
+      "passed": false
+    }
+  ],
+  "drift_ablation": []
+}

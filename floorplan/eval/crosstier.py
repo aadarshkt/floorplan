@@ -72,7 +72,8 @@ def _subsample(pts: np.ndarray, n: int) -> np.ndarray:
 
 def _n_keyframes(video_run: Path) -> int | None:
     imgs = video_run / "colmap" / "imgs"
-    return len(list(imgs.iterdir())) if imgs.is_dir() else None
+    # images sit in one sub-folder per camera group (camera_000/...)
+    return sum(1 for p in imgs.rglob("*") if p.is_file()) if imgs.is_dir() else None
 
 
 def _room_summary(result: dict) -> dict:

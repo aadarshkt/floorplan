@@ -1,6 +1,6 @@
 """CPU plane-sweep multi-view stereo.
 
-COLMAP's dense MVS (``patch_match_stereo``) needs CUDA. When it is unavailable we
+COLMAP's dense MVS (``patch_match_stereo``) needs CUDA/HIP. When unavailable we
 still have accurate SfM camera poses, so we densify the sparse cloud ourselves:
 for each reference image we sweep a set of depth hypotheses, warp the grayscale
 image into nearby views and keep, per pixel, the depth with the lowest
@@ -19,7 +19,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image, ImageFilter, ImageOps
+from scipy.ndimage import uniform_filter
 
 from floorplan.config import Settings
 from floorplan.fusion.colmap_path import ImagePose
@@ -27,9 +28,10 @@ from floorplan.ingest.photos import PhotoSet
 
 
 def _load_gray(path: Path, max_dim: int) -> tuple[np.ndarray, float]:
-    im = Image.open(path).convert("L")
+    with Image.open(path) as source:
+        im = ImageOps.exif_transpose(source).convert("L")
     w, h = im.size
-    s = max_dim / max(w, h)
+    s = min(1.0, max_dim / max(w, h))
     if s < 1.0:
         im = im.resize((max(1, int(round(w * s))), max(1, int(round(h * s)))), Image.BILINEAR)
     im = im.filter(ImageFilter.GaussianBlur(0.8))
@@ -40,7 +42,7 @@ def _paths_for(photos: PhotoSet, images: list[ImagePose]) -> list[Path | None]:
     """Map COLMAP image names back to source paths (copies are '<idx><suffix>')."""
     by_name: dict[str, Path] = {f"{i:06d}{p.suffix.lower()}": p
                                 for i, p in enumerate(photos.image_paths)}
-    return [by_name.get(im.name) for im in images]
+    return [im.image_path if im.image_path is not None else by_name.get(im.name) for im in images]
 
 
 def _depth_range(images: list[ImagePose], ref: int, pts: np.ndarray,
@@ -48,7 +50,8 @@ def _depth_range(images: list[ImagePose], ref: int, pts: np.ndarray,
     if len(pts) < 20:
         return None
     im = images[ref]
-    cam = (pts - im.t) @ im.R  # world -> camera (rows)
+    points = im.obs_xyz if im.obs_xyz is not None and len(im.obs_xyz) >= 20 else pts
+    cam = points @ im.R.T + im.t  # world -> camera (rows)
     z = cam[:, 2]
     z = z[z > 0]
     if len(z) < 20:
@@ -77,22 +80,22 @@ def densify(photos: PhotoSet, images: list[ImagePose], K: np.ndarray,
         return np.zeros((0, 3)), np.zeros((0,))
 
     grays: list[np.ndarray | None] = [None] * len(images)
-    scale = 1.0
+    intrinsics = {}
     for i in usable:
         g, scale = _load_gray(paths[i], cfg.mvs_max_dim)
         grays[i] = g
-    h, w = grays[usable[0]].shape
-    fx, fy = K[0, 0] * scale, K[1, 1] * scale
-    cx, cy = K[0, 2] * scale, K[1, 2] * scale
-    if fx <= 0 or fy <= 0:
-        return np.zeros((0, 3)), np.zeros((0,))
-
-    uu, vv = np.meshgrid(np.arange(w, dtype=np.float64), np.arange(h, dtype=np.float64))
-    dx = (uu - cx) / fx
-    dy = (vv - cy) / fy
+        calibration = (images[i].K if images[i].K is not None else K).copy()
+        if images[i].size:
+            cw, ch = images[i].size
+            calibration[0] *= g.shape[1] / cw
+            calibration[1] *= g.shape[0] / ch
+        else:
+            calibration[:2] *= scale
+        intrinsics[i] = calibration
 
     centres = np.asarray([im.centre for im in images])
-    refs = usable[: cfg.mvs_ref_max] if cfg.mvs_ref_max else usable
+    refs = ([usable[i] for i in np.linspace(0, len(usable)-1, cfg.mvs_ref_max).astype(int)]
+            if cfg.mvs_ref_max and len(usable) > cfg.mvs_ref_max else usable)
     n_depth = cfg.mvs_depth_samples
 
     all_pts: list[np.ndarray] = []
@@ -101,15 +104,23 @@ def densify(photos: PhotoSet, images: list[ImagePose], K: np.ndarray,
         rng = _depth_range(images, r, sparse_pts, cfg)
         if rng is None:
             continue
-        zs = np.linspace(rng[0], rng[1], n_depth)
+        zs = 1.0 / np.linspace(1.0/rng[0], 1.0/rng[1], n_depth)
 
         # pick the nearest source views (by camera-centre distance)
         d = np.linalg.norm(centres - centres[r], axis=1)
-        order = [j for j in np.argsort(d) if j != r and j in usable][: cfg.mvs_neighbors]
-        if not order:
+        order = [j for j in np.argsort(d) if j != r and j in usable and d[j] > 1e-5
+                 and float(images[r].R[2] @ images[j].R[2]) > 0.1][:cfg.mvs_neighbors]
+        if len(order) < 2:
             continue
 
         ref_img = grays[r]
+        h, w = ref_img.shape
+        kr = intrinsics[r]
+        if kr[0, 0] <= 0 or kr[1, 1] <= 0:
+            continue
+        uu, vv = np.meshgrid(np.arange(w, dtype=np.float64), np.arange(h, dtype=np.float64))
+        dx = (uu - kr[0, 2]) / kr[0, 0]
+        dy = (vv - kr[1, 2]) / kr[1, 1]
         cost = np.full((n_depth, h, w), np.inf, dtype=np.float32)
         for k, z in enumerate(zs):
             pc = np.stack([dx * z, dy * z, np.full_like(dx, z)], axis=-1)   # (h,w,3)
@@ -121,17 +132,28 @@ def densify(photos: PhotoSet, images: list[ImagePose], K: np.ndarray,
                 zj = cam[..., 2]
                 valid = zj > 1e-6
                 safe = np.where(valid, zj, 1.0)
-                x = fx * cam[..., 0] / safe + cx
-                y = fy * cam[..., 1] / safe + cy
+                kj = intrinsics[j]
+                x = kj[0, 0] * cam[..., 0] / safe + kj[0, 2]
+                y = kj[1, 1] * cam[..., 1] / safe + kj[1, 2]
                 vals, ok = _sample(grays[j], x, y, valid)
                 acc += np.where(ok, np.abs(vals - ref_img), 0.0)
                 cnt += ok
             with np.errstate(invalid="ignore"):
-                cost[k] = np.where(cnt > 0, acc / np.maximum(cnt, 1.0), np.inf)
+                # Aggregate a small patch; isolated matching pixels are ambiguous.
+                patch_count = uniform_filter(cnt, size=3)
+                patch_cost = uniform_filter(acc, size=3) / np.maximum(patch_count, 1e-6)
+                cost[k] = np.where((cnt >= 2) & (patch_count >= 2), patch_cost, np.inf)
 
         best = np.argmin(cost, axis=0)
         best_cost = np.take_along_axis(cost, best[None], axis=0)[0]
-        accept = np.isfinite(best_cost) & (best_cost <= cfg.mvs_cost_tol)
+        # A flat white wall can match at every depth. Require texture and a
+        # distinct minimum outside the winning depth's immediate neighborhood.
+        alternatives = np.abs(np.arange(n_depth)[:, None, None] - best[None]) > 2
+        second = np.min(np.where(alternatives, cost, np.inf), axis=0)
+        variance = np.maximum(0, uniform_filter(ref_img**2, 5) - uniform_filter(ref_img, 5)**2)
+        accept = (np.isfinite(best_cost) & np.isfinite(second)
+                  & (best_cost <= cfg.mvs_cost_tol) & (variance >= 0.0001)
+                  & (second - best_cost >= np.maximum(0.005, 0.15 * second)))
         if not accept.any():
             continue
         z = zs[best]
